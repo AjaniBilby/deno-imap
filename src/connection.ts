@@ -358,30 +358,25 @@ export class ImapConnection {
       throw new ImapNotConnectedError();
     }
 
-    // Check if we have a line in the buffer
-    const crlfIndex = this.bufferedData.indexOf(CRLF);
-
-    if (crlfIndex !== -1) {
-      // We have a line in the buffer
-      const line = this.bufferedData.substring(0, crlfIndex);
-      this.bufferedData = this.bufferedData.substring(crlfIndex + CRLF.length);
-
-      // Reset socket activity monitor since we successfully read data
-      await this.resetSocketActivity();
-
-      return line;
-    }
-
-    // Read more data
-    try {
+    // Keep adding to the buffer until a new line in present
+    let crlfIndex = this.bufferedData.indexOf(CRLF);
+    let tail = this.bufferedData.length-2; // used to prevent rescans
+    while (crlfIndex === -1) {
       const data = await this.read();
       this.bufferedData += data;
 
-      // Try again
-      return this.readLine();
-    } catch (error) {
-      throw error;
+      crlfIndex = this.bufferedData.indexOf(CRLF, tail);
+      tail = this.bufferedData.length-2;
     }
+
+    // We have a line in the buffer
+    const line = this.bufferedData.substring(0, crlfIndex);
+    this.bufferedData = this.bufferedData.substring(crlfIndex + CRLF.length);
+
+    // Reset socket activity monitor since we successfully read data
+    await this.resetSocketActivity();
+
+    return line;
   }
 
   /**

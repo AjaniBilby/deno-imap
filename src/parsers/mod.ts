@@ -288,15 +288,13 @@ export function parseEnvelope(data: string): ImapEnvelope {
 
   try {
     // Extract the parts between the outer parentheses
-    const match = data.match(/^\((.*)\)$/);
-
-    if (!match) {
-      throw new ImapParseError('Invalid envelope format', data);
-    }
+    if (!data.startsWith("(")) throw new Error("Missing envelope outer parameter start");
+    if (!data.endsWith  (")")) throw new Error("Missing envelope outer parameter start");
+    data = data.slice(1, -1);
 
     // Split the envelope data into its components
     // This is a simplified approach - a real implementation would use a proper IMAP parser
-    const parts = parseListItems(match[1]);
+    const parts = parseListItems(data);
 
     if (parts.length >= 10) {
       // Remove quotes from string values

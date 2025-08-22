@@ -360,13 +360,12 @@ export class ImapConnection {
 
     // Keep adding to the buffer until a new line in present
     let crlfIndex = this.bufferedData.indexOf(CRLF);
-    let tail = this.bufferedData.length-2; // used to prevent rescans
     while (crlfIndex === -1) {
+      const tail = this.bufferedData.length; // used to prevent rescans
       const data = await this.read();
       this.bufferedData += data;
 
-      crlfIndex = this.bufferedData.indexOf(CRLF, tail);
-      tail = this.bufferedData.length-2;
+      crlfIndex = this.bufferedData.indexOf(CRLF, tail-3);
     }
 
     // We have a line in the buffer

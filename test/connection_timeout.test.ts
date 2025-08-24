@@ -1,12 +1,7 @@
-/**
- * IMAP connection timeout tests
- *
- * This file contains tests for the IMAP connection's timeout error handling.
- */
+import { assertEquals, assertRejects } from '@std/assert';
 
-import { assertEquals, assertRejects } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { ImapConnection } from '../src/connection.ts';
-import { ImapTimeoutError } from '../src/errors.ts';
+import { ImapTimeoutError } from "~/errors.ts";
+import { ImapConnection } from "~/connection.ts";
 
 Deno.test('ImapConnection - Socket timeout handling', async () => {
   // Create a connection instance

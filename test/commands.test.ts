@@ -1,9 +1,6 @@
-/**
- * Tests for the IMAP commands module
- */
-
 import { assertEquals } from '@std/assert';
-import * as commands from '../src/commands/mod.ts';
+
+import * as commands from "~/commands/mod.ts";
 
 // Test LIST command
 Deno.test('list command formats correctly with empty reference', () => {

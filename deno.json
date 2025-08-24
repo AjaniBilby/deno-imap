@@ -9,6 +9,8 @@
     "fmt": "deno fmt"
   },
   "imports": {
+    "~/": "./src/",
+
     "@std/assert": "jsr:@std/assert@1",
     "@std/encoding": "jsr:@std/encoding@1"
   },
@@ -22,7 +24,7 @@
     "lineWidth": 100
   },
   "lint": {
-    "exclude": ["test/", "**/*_test.ts"]
+    "exclude": ["test/", "**/*.test.ts"]
   },
   "test": {
 		"include": ["test/**"]

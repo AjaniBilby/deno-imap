@@ -1,13 +1,8 @@
-/**
- * IMAP client reconnection tests
- *
- * This file contains tests for the IMAP client's timeout error handling and reconnection logic.
- */
+import { assertEquals, assertRejects } from '@std/assert';
 
-import { assertEquals, assertRejects } from 'https://deno.land/std/assert/mod.ts';
-import { ImapClient } from '../src/client.ts';
-import { ImapConnectionError, ImapTimeoutError } from '../src/errors.ts';
-import { ImapConnection } from '../src/connection.ts';
+import { ImapConnectionError, ImapTimeoutError } from "~/errors.ts";
+import { ImapConnection } from "~/connection.ts";
+import { ImapClient } from "~/client.ts";
 
 // Mock responses for the tests
 const mockResponses = {

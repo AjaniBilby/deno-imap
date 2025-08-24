@@ -1,13 +1,7 @@
-/**
- * IMAP client tests
- *
- * This file contains tests for the IMAP client.
- * It uses a mock IMAP server to test the client functionality.
- */
+import { assertEquals, assertRejects } from '@std/assert';
 
-import { assertEquals, assertRejects } from 'https://deno.land/std/assert/mod.ts';
-import { ImapClient } from '../src/client.ts';
-import { ImapNoMailboxSelectedError, ImapNotConnectedError } from '../src/errors.ts';
+import { ImapNoMailboxSelectedError, ImapNotConnectedError } from "~/errors.ts";
+import { ImapClient } from "~/client.ts";
 
 // Mock server responses
 const mockResponses = {

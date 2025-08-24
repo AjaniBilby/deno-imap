@@ -327,6 +327,7 @@ function parseSimplePart(data: string): ImapBodyStructure {
 
 /**
  * Parses a list of items
+ * @deprecated
  * @param data List data
  * @returns Array of items
  */
@@ -367,6 +368,7 @@ function parseListItems(data: string): string[] {
 
 /**
  * Parses a parameter list
+ * @deprecated
  * @param data Parameter list data
  * @returns Parameter object
  */
@@ -406,6 +408,7 @@ function parseParameterList(data: string): Record<string, string> {
 
 /**
  * Parses a string value
+ * @deprecated
  * @param value String value
  * @returns Parsed string or undefined
  */

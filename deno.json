@@ -23,5 +23,8 @@
   },
   "lint": {
     "exclude": ["test/", "**/*_test.ts"]
-  }
+  },
+  "test": {
+		"include": ["test/**"]
+	}
 }

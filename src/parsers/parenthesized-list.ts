@@ -21,19 +21,19 @@ type ParenthesizedList = Array<string | ParenthesizedList>;
  * @example
  * ```ts
  * // Basic parsing
- * ExtractBalancedParenthesis('(a b c)')
+ * ParseParenthesizedList('(a b c)')
  * // Returns: ['a', 'b', 'c']
  *
  * // Nested structures
- * ExtractBalancedParenthesis('(a (b c) d)')
+ * ParseParenthesizedList('(a (b c) d)')
  * // Returns: ['a', ['b', 'c'], 'd']
  *
  * // Quoted strings
- * ExtractBalancedParenthesis('("hello world" test)')
+ * ParseParenthesizedList('("hello world" test)')
  * // Returns: ['"hello world"', 'test']
  *
  * // IMAP literals
- * ExtractBalancedParenthesis('({5}\r\nhello world)')
+ * ParseParenthesizedList('({5}\r\nhello world)')
  * // Returns: ['"hello"']
  * ```
  */

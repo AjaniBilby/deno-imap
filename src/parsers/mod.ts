@@ -1,4 +1,4 @@
-import type { ImapAddress, ImapEnvelope, ImapMailbox } from '~/types/mod.ts';
+import type { ImapAddress, ImapBodyStructure, ImapEnvelope, ImapMailbox } from '~/types/mod.ts';
 import { parseBodyStructure } from '~/parsers/bodystructure.ts';
 import { ImapParseError } from '~/errors.ts';
 
@@ -371,13 +371,27 @@ function parseListItems(data: string): string[] {
   return result;
 }
 
+
+type FetchData = {
+  uid?:   number,
+  seq?:   number,
+  flags?: string[],
+  size?:  number,
+  internalDate?: Date,
+  envelope?: ImapEnvelope,
+  bodyStructure?: ImapBodyStructure,
+  headers?: Record<string, string | string[]>,
+  raw?: Uint8Array,
+  parts?: Record<string, unknown>
+}
+
 /**
  * Parses a fetch response
  * @param lines Fetch response lines
  * @returns Fetch data
  */
-export function parseFetch(lines: string[]): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
+export function parseFetch(lines: string[]): FetchData {
+  const result: FetchData = {};
 
   try {
     let currentSection: string | null = null;
@@ -388,9 +402,7 @@ export function parseFetch(lines: string[]): Record<string, unknown> {
     // First, extract the sequence number from the first line
     const firstLine = lines[0];
     const seqMatch = firstLine.match(/^\* (\d+) FETCH/i);
-    if (seqMatch) {
-      result.seq = parseInt(seqMatch[1], 10);
-    }
+    if (seqMatch) result.seq = parseInt(seqMatch[1], 10);
 
     // Extract other message data from the first line
     if (firstLine.includes('FLAGS')) {
@@ -406,16 +418,12 @@ export function parseFetch(lines: string[]): Record<string, unknown> {
 
     if (firstLine.includes('UID')) {
       const uidMatch = firstLine.match(/UID (\d+)/i);
-      if (uidMatch) {
-        result.uid = parseInt(uidMatch[1], 10);
-      }
+      if (uidMatch) result.uid = parseInt(uidMatch[1], 10);
     }
 
     if (firstLine.includes('RFC822.SIZE')) {
       const sizeMatch = firstLine.match(/RFC822\.SIZE (\d+)/i);
-      if (sizeMatch) {
-        result.size = parseInt(sizeMatch[1], 10);
-      }
+      if (sizeMatch) result.size = parseInt(sizeMatch[1], 10);
     }
 
     if (firstLine.includes('INTERNALDATE')) {
@@ -524,14 +532,12 @@ export function parseFetch(lines: string[]): Record<string, unknown> {
               }
             } else {
               // Store other section data
-              if (!result.parts) {
-                result.parts = {};
-              }
+              if (!result.parts) result.parts = {};
 
               // Convert the array of strings to a Uint8Array
               const textData = sectionData.join('\r\n');
               const encoder = new TextEncoder();
-              (result.parts as Record<string, unknown>)[currentSection] = {
+              result.parts[currentSection] = {
                 data: encoder.encode(textData),
                 size: textData.length,
                 type: 'text/plain', // Default type
@@ -616,7 +622,7 @@ export function parseFetch(lines: string[]): Record<string, unknown> {
           // Everything after the first empty line is the body
           const bodyText = parts.slice(1).join('\r\n\r\n');
           const encoder = new TextEncoder();
-          (result.parts as Record<string, unknown>)['TEXT'] = {
+          result.parts['TEXT'] = {
             data: encoder.encode(bodyText),
             size: bodyText.length,
             type: 'text/plain', // Default type
@@ -631,7 +637,7 @@ export function parseFetch(lines: string[]): Record<string, unknown> {
         // Convert the array of strings to a Uint8Array
         const textData = sectionData.join('\r\n');
         const encoder = new TextEncoder();
-        (result.parts as Record<string, unknown>)[currentSection] = {
+        result.parts[currentSection] = {
           data: encoder.encode(textData),
           size: textData.length,
           type: 'text/plain', // Default type

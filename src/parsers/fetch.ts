@@ -1,4 +1,4 @@
-import { ExtractFirstParameterValue, GetParameterListStr, ParseImapAddressList, ParseParenthesized } from './parameters.ts';
+import { ExtractFirstParameterValue, GetParameterListStr, ParameterString, ParenthesizedList, ParenthesizedValue, ParseImapAddressList, ParseParenthesized } from './parameters.ts';
 import { ImapBodyStructure, ImapEnvelope } from '../types/mod.ts';
 import { ChunkArray } from '../utils/internal.ts';
 
@@ -10,9 +10,11 @@ export type FetchData = Partial<{
 	size:  number,
 	internalDate: Date,
 	envelope: ImapEnvelope,
-	bodyStructure?: ImapBodyStructure,
+	bodyStructure?: ImapBodyStructure[],
 	headers: Record<string, string>,
-	parts: Record<string, unknown>
+	parts: Record<string, unknown>,
+
+	raw?: Uint8Array
 }>
 
 export function ParseFetch(str: string): FetchData {
@@ -34,7 +36,7 @@ export function ParseFetch(str: string): FetchData {
 	if (!Array.isArray(list)) throw new Error("Expected a list, but got an atom as fetch");
 
 
-	offset += results?.reached;
+	offset += results.reached;
 	for (const [key, value] of ChunkArray(list, 2)) {
 		if (typeof key !== "string") throw new Error("Expected a key, got an array");
 
@@ -67,22 +69,7 @@ export function ParseFetch(str: string): FetchData {
 				break;
 			}
 			case "ENVELOPE": {
-				const date = GetParameterListStr(value, 0);
-
-				// Format: (date subject (from) (sender) (reply-to) (to) (cc) (bcc) in-reply-to message-id)
-				data.envelope = {
-					date:    date ? new Date(date) : undefined,
-					subject:   GetParameterListStr(value, 1),
-					from:      ParseImapAddressList(value[2]),
-					sender:    ParseImapAddressList(value[3]),
-					replyTo:   ParseImapAddressList(value[4]),
-					to:        ParseImapAddressList(value[5]),
-					cc:        ParseImapAddressList(value[6]),
-					bcc:       ParseImapAddressList(value[7]),
-					inReplyTo: GetParameterListStr(value, 8),
-					messageId: GetParameterListStr(value, 9),
-				}
-
+				if (Array.isArray(value)) data.envelope = ParseEnvelope(value);
 				break;
 			}
 			case "BODY[HEADER]": {
@@ -97,26 +84,16 @@ export function ParseFetch(str: string): FetchData {
 				break;
 			}
 			case "BODYSTRUCTURE": {
-				// Format: (type subtype (parameters) id description encoding size md5 (disposition) language location)
-				data.bodyStructure = {
-					type:        GetParameterListStr(value, 1) || "",
-					subtype:     GetParameterListStr(value, 2) || "",
-					parameters: Array.isArray(value[3])
-						? Object.fromEntries(ChunkArray(value[3], 2))
-						: {},
-					id:          GetParameterListStr(value, 4),
-					description: GetParameterListStr(value, 5),
-					encoding:    GetParameterListStr(value, 6) || "7BIT",
-					size: Number(GetParameterListStr(value, 7) || 0),
-					md5:         GetParameterListStr(value, 8),
-					dispositionParameters: Array.isArray(value[9])
-						? Object.fromEntries(ChunkArray(value[9], 2))
-						: {},
-					language:                        value[10] as string | string[],
-					location:   GetParameterListStr(value, 11),
-				}
-
+				if (!Array.isArray(value)) break;
+				data.bodyStructure = value.map(x => ParseBodyStructure(x));
 				break;
+			}
+			case "BODY[]": {
+				data.raw = new TextEncoder().encode(ParameterString(value));
+				break;
+			}
+			default: {
+				console.warn("Unparsed", key);
 			}
 		}
 	}
@@ -147,7 +124,7 @@ export function ParseFetchHeaders(str: string): Record<string, string> {
 			let e = str.indexOf("\r\n", i);
 			if (e === -1) e = str.length;
 
-			const value = decodeURIComponent(str.slice(i, e).trim());
+			const value = str.slice(i, e).trim();
 			into[key] += value;
 			i = e + 2;
 
@@ -158,4 +135,63 @@ export function ParseFetchHeaders(str: string): Record<string, string> {
 	}
 
 	return into;
+}
+
+
+
+export function ParseEnvelope(value: ParenthesizedList): ImapEnvelope {
+	const date = GetParameterListStr(value, 0);
+
+	// Format: (date subject (from) (sender) (reply-to) (to) (cc) (bcc) in-reply-to message-id)
+	return {
+		date:    date ? new Date(date) : undefined,
+		subject:   GetParameterListStr(value, 1),
+		from:      ParseImapAddressList(value[2]),
+		sender:    ParseImapAddressList(value[3]),
+		replyTo:   ParseImapAddressList(value[4]),
+		to:        ParseImapAddressList(value[5]),
+		cc:        ParseImapAddressList(value[6]),
+		bcc:       ParseImapAddressList(value[7]),
+		inReplyTo: GetParameterListStr(value, 8),
+		messageId: GetParameterListStr(value, 9),
+	}
+}
+
+export function ParseBodyStructure(value: ParenthesizedValue): ImapBodyStructure {
+	// Format: (type subtype (parameters) id description encoding size md5 (disposition) language location)
+
+	return {
+		type:        GetParameterListStr(value, 0) || "",
+		subtype:     GetParameterListStr(value, 1) || "",
+		parameters: Array.isArray(value[2])
+			? Object.fromEntries(ChunkArray(value[2], 2).map(x => x.map(ParameterString)))
+			: {},
+		id:          GetParameterListStr(value, 3),
+		description: GetParameterListStr(value, 4),
+		encoding:    GetParameterListStr(value, 5) || "7BIT",
+		size: Number(GetParameterListStr(value, 6) || 0),
+		md5:         GetParameterListStr(value, 7),
+		disposition: ParseContentDisposition(value[8]),
+		language:                         value[9] as string | string[],
+		location:   GetParameterListStr(value, 10),
+	}
+}
+
+export function ParseContentDisposition(value: ParenthesizedValue) {
+	if (!value || value === "NIL" || !Array.isArray(value)) return { type: "ATTACHMENT", parameters: {} };
+
+	const type = GetParameterListStr(value, 0)?.toUpperCase() || "ATTACHMENT";
+
+	const parameters: Record<string, string> = {};
+
+	if (Array.isArray(value[1])) for (const [ k, v ] of ChunkArray(value[1], 2)) {
+		const key = ParameterString(k);
+		if (!key) continue;
+
+		const value = ParameterString(v) || "";
+
+		parameters[key.toUpperCase()] = value;
+	}
+
+	return { type, parameters };
 }

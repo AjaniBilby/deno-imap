@@ -107,7 +107,7 @@ export function ParseParenthesized(str: string, offset: number = 0): { val: Pare
       }
       default: {
         const token = TryAtom(str, offset);
-        if (!token) throw new Error(`Unexpected toke '${str[offset]}' at ${offset}`);
+        if (!token) throw new Error(`Unexpected token '${str[offset]}' at ${offset}`);
         tail().push(token.val);
         offset = token.reached;
         continue outer;
@@ -209,13 +209,13 @@ export function ExtractFirstParameterValue(val: ParenthesizedValue) {
 
 export function GetParameterListStr (list: ParenthesizedValue, index: number): string | undefined {
   if (!Array.isArray(list)) return undefined;
+  return ParameterString(list[index]);
+}
 
-  const val = list[index];
+export function ParameterString(val: ParenthesizedValue) {
   if (!val) return undefined;
+  if (Array.isArray(val)) return undefined;
   if (val === "NIL") return undefined;
-
-  if (typeof val !== "string") return undefined;
-
   if (val.startsWith('"') && val.endsWith('"')) return val.slice(1, -1);
   return val;
 }

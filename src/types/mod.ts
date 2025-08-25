@@ -149,13 +149,13 @@ export interface ImapBodyStructure {
   messageBodyStructure?: ImapBodyStructure;
   /** MD5 hash of the body */
   md5?: string;
-  /** Disposition type */
-  dispositionType?: string;
-  /** Disposition parameters */
-  dispositionParameters?: Record<string, string>;
-  /** Content language */
+
+  disposition: {
+    type: string,
+    parameters: Record<string, string>
+  }
+
   language?: string | string[];
-  /** Content location */
   location?: string;
 }
 

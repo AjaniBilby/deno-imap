@@ -1,7 +1,7 @@
 import { assertEquals } from '@std/assert';
 
-import type { ImapBodyStructure } from "~/types/mod.ts";
-import { findAttachments, hasAttachments, parseBodyStructure } from "~/parsers/mod.ts";
+import type { ImapBodyStructure } from '~/types/mod.ts';
+import { findAttachments, hasAttachments, parseBodyStructure } from '~/parsers/mod.ts';
 
 Deno.test('parseBodyStructure - simple text/plain', () => {
   const input = '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42)';

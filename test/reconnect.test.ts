@@ -1,8 +1,8 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { ImapConnectionError, ImapTimeoutError } from "~/errors.ts";
-import { ImapConnection } from "~/connection.ts";
-import { ImapClient } from "~/client.ts";
+import { ImapConnectionError, ImapTimeoutError } from '~/errors.ts';
+import { ImapConnection } from '~/connection.ts';
+import { ImapClient } from '~/client.ts';
 
 // Mock responses for the tests
 const mockResponses = {

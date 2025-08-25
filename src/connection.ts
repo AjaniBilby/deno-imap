@@ -8,7 +8,7 @@ import {
 import { createCancellablePromise } from '~/utils/promises.ts';
 
 const DEFAULT_CONNECTION_TIMEOUT = 30000; // ms
-const DEFAULT_SOCKET_TIMEOUT     = 60000; // ms
+const DEFAULT_SOCKET_TIMEOUT = 60000; // ms
 
 const DEFAULT_PORTS = {
   plain: 143,
@@ -331,7 +331,7 @@ export class ImapConnection {
       const data = await this.read();
       this.bufferedData += data;
 
-      crlfIndex = this.bufferedData.indexOf(CRLF, tail-3);
+      crlfIndex = this.bufferedData.indexOf(CRLF, tail - 3);
     }
 
     // We have a line in the buffer

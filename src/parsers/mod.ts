@@ -281,8 +281,8 @@ export function parseEnvelope(data: string): ImapEnvelope {
 
   try {
     // Extract the parts between the outer parentheses
-    if (!data.startsWith("(")) throw new Error("Missing envelope outer parameter start");
-    if (!data.endsWith  (")")) throw new Error("Missing envelope outer parameter start");
+    if (!data.startsWith('(')) throw new Error('Missing envelope outer parameter start');
+    if (!data.endsWith(')')) throw new Error('Missing envelope outer parameter start');
     data = data.slice(1, -1);
 
     // Split the envelope data into its components

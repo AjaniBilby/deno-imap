@@ -1,6 +1,6 @@
 import { assertEquals } from '@std/assert';
 
-import * as commands from "~/commands/mod.ts";
+import * as commands from '~/commands/mod.ts';
 
 Deno.test('list command formats correctly with empty reference', () => {
   const result = commands.list('', '*');

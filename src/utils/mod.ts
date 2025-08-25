@@ -5,7 +5,6 @@ import { hasAttachments } from '~/parsers/mod.ts';
 export * from '~/utils/promises.ts';
 export * from '~/utils/attachments.ts';
 
-
 /**
  * Fetches all messages in a mailbox
  * @param client IMAP client

@@ -24,9 +24,14 @@
     "lineWidth": 100
   },
   "lint": {
-    "exclude": ["test/", "**/*.test.ts"]
+    "include": ["src/**/*"],
+    "exclude": ["test/", "**/*.test.ts"],
+    "rules": {
+      "tags": ["recommended"],
+      "include": ["no-deprecated-deno-api"]
+    }
   },
   "test": {
-		"include": ["test/**"]
-	}
+    "include": ["test/**", "**/*.test.ts"]
+  }
 }

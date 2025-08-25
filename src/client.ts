@@ -23,7 +23,6 @@ import {
   ImapTimeoutError,
 } from '~/errors.ts';
 
-
 /**
  * Default options for the IMAP client
  */

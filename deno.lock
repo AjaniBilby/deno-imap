@@ -1,18 +1,35 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@mjackson/multipart-parser@~0.10.1": "0.10.1",
     "jsr:@std/assert@1": "1.0.9",
-    "jsr:@std/internal@^1.0.5": "1.0.5"
+    "jsr:@std/encoding@1": "1.0.10",
+    "jsr:@std/internal@^1.0.5": "1.0.5",
+    "npm:@mjackson/headers@~0.11.1": "0.11.1"
   },
   "jsr": {
+    "@mjackson/multipart-parser@0.10.1": {
+      "integrity": "3d97055d48fd800150bf8d0319271b281f36c7909206c2f2bcfbc1873a8db33d",
+      "dependencies": [
+        "npm:@mjackson/headers"
+      ]
+    },
     "@std/assert@1.0.9": {
       "integrity": "a9f0c611a869cc791b26f523eec54c7e187aab7932c2c8e8bea0622d13680dcd",
       "dependencies": [
         "jsr:@std/internal"
       ]
     },
+    "@std/encoding@1.0.10": {
+      "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
+    },
     "@std/internal@1.0.5": {
       "integrity": "54a546004f769c1ac9e025abd15a76b6671ddc9687e2313b67376125650dc7ba"
+    }
+  },
+  "npm": {
+    "@mjackson/headers@0.11.1": {
+      "integrity": "sha512-uXXhd4rtDdDwkqAuGef1nuafkCa1NlTmEc1Jzc0NL4YiA1yON1NFXuqJ3hOuKvNKQwkiDwdD+JJlKVyz4dunFA=="
     }
   },
   "redirects": {
@@ -190,6 +207,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@mjackson/multipart-parser@~0.10.1",
       "jsr:@std/assert@1",
       "jsr:@std/encoding@1"
     ]

@@ -11,6 +11,7 @@
     "validate:test":  "deno test --allow-net"
   },
   "imports": {
+    "@mjackson/multipart-parser": "jsr:@mjackson/multipart-parser@^0.10.1",
     "@std/assert": "jsr:@std/assert@1",
     "@std/encoding": "jsr:@std/encoding@1"
   },

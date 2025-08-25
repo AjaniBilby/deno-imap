@@ -1,6 +1,7 @@
 import { SkipInlineWhiteSpace } from './util.ts';
+import { ImapAddress } from '../types/mod.ts';
 
-export type ParenthesizedValue = string | ParenthesizedList;
+export type ParenthesizedValue = string | Array<ParenthesizedValue>;
 export type ParenthesizedList  = Array<ParenthesizedValue>;
 
 /**
@@ -37,31 +38,31 @@ export type ParenthesizedList  = Array<ParenthesizedValue>;
  * @example
  * ```ts
  * // Standalone atom
- * ParseParenthesizedList('NIL')
+ * ParseParenthesized('NIL')
  * // Returns: 'NIL'
  *
  * // Standalone quoted string
- * ParseParenthesizedList('"hello world"')
+ * ParseParenthesized('"hello world"')
  * // Returns: '"hello world"'
  *
  * // Standalone IMAP literal
- * ParseParenthesizedList('{5}\r\nhello')
+ * ParseParenthesized('{5}\r\nhello')
  * // Returns: '"hello"'
  *
  * // Basic parenthesized list
- * ParseParenthesizedList('(a b c)')
+ * ParseParenthesized('(a b c)')
  * // Returns: ['a', 'b', 'c']
  *
  * // Nested structures
- * ParseParenthesizedList('(a (b c) d)')
+ * ParseParenthesized('(a (b c) d)')
  * // Returns: ['a', ['b', 'c'], 'd']
  *
  * // Mixed tokens
- * ParseParenthesizedList('(NIL "x" {3}\r\nabc)')
+ * ParseParenthesized('(NIL "x" {3}\r\nabc)')
  * // Returns: ['NIL', '"x"', '"abc"']
  * ```
  */
-export function ParseParenthesizedList(str: string, offset: number = 0): { val: ParenthesizedValue, reached: number } | undefined {
+export function ParseParenthesized(str: string, offset: number = 0): { val: ParenthesizedValue, reached: number } | undefined {
   offset = SkipInlineWhiteSpace(str, offset);
 
   // reached the end
@@ -118,6 +119,9 @@ export function ParseParenthesizedList(str: string, offset: number = 0): { val: 
 
   return { val: tree, reached: offset };
 }
+
+
+
 
 function TryAtom(str: string, offset: number = 0) {
   return TryString(str, offset)
@@ -190,4 +194,51 @@ function TryKeyword(str: string, offset: number = 0) {
   if (val.length < 1) return undefined;
 
   return { val, reached: i };
+}
+
+
+
+/*============================
+ * Helpers
+=============================*/
+
+export function ExtractFirstParameterValue(val: ParenthesizedValue) {
+  if (typeof val === "string") return val;
+  return ExtractFirstParameterValue(val[0] || "");
+}
+
+export function GetParameterListStr (list: ParenthesizedValue, index: number): string | undefined {
+  if (!Array.isArray(list)) return undefined;
+
+  const val = list[index];
+  if (!val) return undefined;
+  if (val === "NIL") return undefined;
+
+  if (typeof val !== "string") return undefined;
+
+  if (val.startsWith('"') && val.endsWith('"')) return val.slice(1, -1);
+  return val;
+}
+
+
+export function ParseImapAddressList(value: ParenthesizedValue) {
+  if (!Array.isArray(value)) return [];
+  return value.map(x => ParseImapAddress(x));
+}
+
+
+export function ParseImapAddress(value: ParenthesizedValue): ImapAddress {
+	if (!Array.isArray(value)) return {
+		name: undefined,
+		sourceRoute: undefined,
+		mailbox: undefined,
+		host: undefined
+	}
+
+	return {
+		name:        GetParameterListStr(value, 0),
+		sourceRoute: GetParameterListStr(value, 1),
+		mailbox:     GetParameterListStr(value, 2),
+		host:        GetParameterListStr(value, 3),
+	}
 }

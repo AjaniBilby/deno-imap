@@ -300,7 +300,8 @@ export function parseEnvelope(data: string): ImapEnvelope {
         return str;
       };
 
-      envelope.date = cleanString(parts[0]);
+      const date = cleanString(parts[0]);
+      if (date) envelope.date = new Date(date)
       envelope.subject = cleanString(parts[1]);
 
       // Parse address lists

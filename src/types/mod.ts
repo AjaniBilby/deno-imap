@@ -92,7 +92,7 @@ export interface ImapMessagePart {
  */
 export interface ImapEnvelope {
   /** Message date */
-  date?: string;
+  date?: Date;
   /** Message subject */
   subject?: string;
   /** Message from addresses */

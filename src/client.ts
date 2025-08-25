@@ -1,5 +1,5 @@
-import * as commands from '~/commands/mod.ts';
-import * as parsers from '~/parsers/mod.ts';
+import * as commands from './commands/mod.ts';
+import * as parsers from './parsers/mod.ts';
 import type {
   ImapAuthMechanism,
   ImapBodyStructure,
@@ -10,9 +10,9 @@ import type {
   ImapMessagePart,
   ImapOptions,
   ImapSearchCriteria,
-} from '~/types/mod.ts';
-import { createCancellablePromise } from '~/utils/promises.ts';
-import { ImapConnection } from '~/connection.ts';
+} from './types/mod.ts';
+import { createCancellablePromise } from './utils/promises.ts';
+import { ImapConnection } from './connection.ts';
 import {
   ImapAuthError,
   ImapCapabilityError,
@@ -21,7 +21,7 @@ import {
   ImapNoMailboxSelectedError,
   ImapNotConnectedError,
   ImapTimeoutError,
-} from '~/errors.ts';
+} from './errors.ts';
 
 /**
  * Default options for the IMAP client

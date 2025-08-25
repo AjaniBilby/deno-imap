@@ -1,11 +1,11 @@
-import type { ImapConnectionOptions } from '~/types/mod.ts';
+import type { ImapConnectionOptions } from './types/mod.ts';
 import {
   ImapConnectionError,
   ImapError,
   ImapNotConnectedError,
   ImapTimeoutError,
-} from '~/errors.ts';
-import { createCancellablePromise } from '~/utils/promises.ts';
+} from './errors.ts';
+import { createCancellablePromise } from './utils/promises.ts';
 
 const DEFAULT_CONNECTION_TIMEOUT = 30000; // ms
 const DEFAULT_SOCKET_TIMEOUT = 60000; // ms

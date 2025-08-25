@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { ImapNoMailboxSelectedError, ImapNotConnectedError } from '~/errors.ts';
-import { ImapClient } from '~/client.ts';
+import { ImapNoMailboxSelectedError, ImapNotConnectedError } from '../src/errors.ts';
+import { ImapClient } from '../src/client.ts';
 
 // Mock server responses
 const mockResponses = {

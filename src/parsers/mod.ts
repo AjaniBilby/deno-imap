@@ -1,6 +1,6 @@
-import type { ImapAddress, ImapBodyStructure, ImapEnvelope, ImapMailbox } from '~/types/mod.ts';
-import { parseBodyStructure } from '~/parsers/bodystructure.ts';
-import { ImapParseError } from '~/errors.ts';
+import type { ImapAddress, ImapBodyStructure, ImapEnvelope, ImapMailbox } from '../types/mod.ts';
+import { parseBodyStructure } from '../parsers/bodystructure.ts';
+import { ImapParseError } from '../errors.ts';
 
 // Export bodystructure parser functions directly
 export { findAttachments, hasAttachments, parseBodyStructure } from './bodystructure.ts';
@@ -372,7 +372,7 @@ function parseListItems(data: string): string[] {
 }
 
 
-type FetchData = {
+export type FetchData = {
   uid?:   number,
   seq?:   number,
   flags?: string[],
@@ -504,19 +504,15 @@ export function parseFetch(lines: string[]): FetchData {
         if (collectedData.length >= sectionSize) {
           // Process the collected data
           if (currentSection) {
-            if (currentSection === 'HEADER') {
-              // Parse headers
-              result.headers = parseHeaders(sectionData);
-            } else if (currentSection === 'FULL') {
+            if (currentSection === 'HEADER') result.headers = parseHeaders(sectionData);
+            else if (currentSection === 'FULL') {
               // Store the full message as raw
               const textData = sectionData.join('\r\n');
               const encoder = new TextEncoder();
               result.raw = encoder.encode(textData);
 
               // Also try to extract the body
-              if (!result.parts) {
-                result.parts = {};
-              }
+              result.parts ||= {};
 
               // Simple parsing to extract body from raw message
               const parts = textData.split('\r\n\r\n');
@@ -524,7 +520,7 @@ export function parseFetch(lines: string[]): FetchData {
                 // Everything after the first empty line is the body
                 const bodyText = parts.slice(1).join('\r\n\r\n');
                 const encoder = new TextEncoder();
-                (result.parts as Record<string, unknown>)['TEXT'] = {
+                result.parts['TEXT'] = {
                   data: encoder.encode(bodyText),
                   size: bodyText.length,
                   type: 'text/plain', // Default type
@@ -532,7 +528,7 @@ export function parseFetch(lines: string[]): FetchData {
               }
             } else {
               // Store other section data
-              if (!result.parts) result.parts = {};
+              result.parts ||= {};
 
               // Convert the array of strings to a Uint8Array
               const textData = sectionData.join('\r\n');
@@ -570,18 +566,13 @@ export function parseFetch(lines: string[]): FetchData {
         const section = inlineBodyMatch[1];
         const content = inlineBodyMatch[2];
 
-        if (section === 'HEADER') {
-          // Parse headers from inline content
-          result.headers = parseHeaders([content]);
-        } else {
-          // Store other section data
-          if (!result.parts) {
-            result.parts = {};
-          }
+        if (section === 'HEADER') result.headers = parseHeaders([content]);
+        else {
+          result.parts ||= {};
 
           // Convert the string to a Uint8Array
           const encoder = new TextEncoder();
-          (result.parts as Record<string, unknown>)[section] = {
+          result.parts[section] = {
             data: encoder.encode(content),
             size: content.length,
             type: 'text/plain', // Default type
@@ -602,19 +593,14 @@ export function parseFetch(lines: string[]): FetchData {
 
     // Process any remaining section data
     if (inSection && currentSection && sectionData.length > 0) {
-      if (currentSection === 'HEADER') {
-        // Parse headers
-        result.headers = parseHeaders(sectionData);
-      } else if (currentSection === 'FULL') {
+      if (currentSection === 'HEADER') result.headers = parseHeaders(sectionData);
+      else if (currentSection === 'FULL') {
         // Store the full message as raw
         const textData = sectionData.join('\r\n');
         const encoder = new TextEncoder();
         result.raw = encoder.encode(textData);
 
-        // Also try to extract the body
-        if (!result.parts) {
-          result.parts = {};
-        }
+        result.parts ||= {};
 
         // Simple parsing to extract body from raw message
         const parts = textData.split('\r\n\r\n');
@@ -629,10 +615,7 @@ export function parseFetch(lines: string[]): FetchData {
           };
         }
       } else {
-        // Store other section data
-        if (!result.parts) {
-          result.parts = {};
-        }
+        result.parts ||= {};
 
         // Convert the array of strings to a Uint8Array
         const textData = sectionData.join('\r\n');

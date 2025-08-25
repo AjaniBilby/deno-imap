@@ -1,9 +1,9 @@
-import type { ImapClient } from '~/client.ts';
-import type { ImapFetchOptions, ImapMessage, ImapSearchCriteria } from '~/types/mod.ts';
-import { hasAttachments } from '~/parsers/mod.ts';
+import type { ImapClient } from '../client.ts';
+import type { ImapFetchOptions, ImapMessage, ImapSearchCriteria } from '../types/mod.ts';
+import { hasAttachments } from '../parsers/mod.ts';
 
-export * from '~/utils/promises.ts';
-export * from '~/utils/attachments.ts';
+export * from '../utils/promises.ts';
+export * from '../utils/attachments.ts';
 
 /**
  * Fetches all messages in a mailbox

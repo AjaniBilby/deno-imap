@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from '@std/assert';
 
-import { ParseParenthesizedList } from '~/parsers/parenthesized-list.ts';
+import { ParseParenthesizedList } from '../../src/parsers/parenthesized-list.ts';
 
 Deno.test('ParseParenthesizedList - Basic functionality', () => {
   // Simple case

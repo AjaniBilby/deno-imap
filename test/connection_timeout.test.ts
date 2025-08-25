@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { ImapTimeoutError } from '~/errors.ts';
-import { ImapConnection } from '~/connection.ts';
+import { ImapTimeoutError } from '../src/errors.ts';
+import { ImapConnection } from '../src/connection.ts';
 
 Deno.test('ImapConnection - Socket timeout handling', async () => {
   // Create a connection instance

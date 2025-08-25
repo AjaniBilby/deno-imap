@@ -1,4 +1,4 @@
-import type { ImapFetchOptions, ImapSearchCriteria } from '~/types/mod.ts';
+import type { ImapFetchOptions, ImapSearchCriteria } from '../types/mod.ts';
 
 /**
  * Generates a LOGIN command

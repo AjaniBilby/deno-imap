@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { createCancellablePromise } from '~/utils/promises.ts';
-import { ImapTimeoutError } from '~/errors.ts';
+import { createCancellablePromise } from '../../src/utils/promises.ts';
+import { ImapTimeoutError } from '../../src/errors.ts';
 
 Deno.test('createCancellablePromise - resolves with the result', async () => {
   const expected = 'test result';

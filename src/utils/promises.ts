@@ -1,9 +1,4 @@
-/**
- * Promise utilities
- * @module
- */
-
-import { ImapTimeoutError } from '../errors.ts';
+import { ImapTimeoutError } from '~/errors.ts';
 
 /**
  * Creates a cancellable promise with a timeout

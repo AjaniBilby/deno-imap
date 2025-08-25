@@ -1,14 +1,3 @@
-/**
- * Attachment utilities
- * @module
- */
-
-/**
- * Decodes attachment data based on its encoding
- * @param data The raw attachment data
- * @param encoding The content transfer encoding
- * @returns Decoded data as Uint8Array
- */
 export function decodeAttachment(data: Uint8Array, encoding: string): Uint8Array {
   const decoder = new TextDecoder();
 

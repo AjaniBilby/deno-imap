@@ -1,45 +1,22 @@
-/**
- * IMAP Connection module
- *
- * Handles the low-level socket communication with the IMAP server.
- * @module
- */
-
+import type { ImapConnectionOptions } from '~/types/mod.ts';
 import {
   ImapConnectionError,
   ImapError,
   ImapNotConnectedError,
   ImapTimeoutError,
-} from './errors.ts';
-import { createCancellablePromise } from './utils/promises.ts';
-import type { ImapConnectionOptions } from './types/mod.ts';
+} from '~/errors.ts';
+import { createCancellablePromise } from '~/utils/promises.ts';
 
-/**
- * Default connection timeout in milliseconds
- */
-const DEFAULT_CONNECTION_TIMEOUT = 30000;
+const DEFAULT_CONNECTION_TIMEOUT = 30000; // ms
+const DEFAULT_SOCKET_TIMEOUT     = 60000; // ms
 
-/**
- * Default socket timeout in milliseconds
- */
-const DEFAULT_SOCKET_TIMEOUT = 60000;
-
-/**
- * Default IMAP ports
- */
 const DEFAULT_PORTS = {
   plain: 143,
   tls: 993,
 };
 
-/**
- * Line terminator for IMAP protocol
- */
-const CRLF = '\r\n';
+const CRLF = '\r\n'; // Line terminator for IMAP protocol
 
-/**
- * Handles the low-level socket communication with the IMAP server
- */
 export class ImapConnection {
   /** Connection options */
   private options: ImapConnectionOptions;
@@ -62,10 +39,6 @@ export class ImapConnection {
   /** Current socket activity cancellable promise */
   private socketActivityCancellable?: ReturnType<typeof createCancellablePromise>;
 
-  /**
-   * Creates a new IMAP connection
-   * @param options Connection options
-   */
   constructor(options: ImapConnectionOptions) {
     this.options = {
       ...options,
@@ -75,9 +48,6 @@ export class ImapConnection {
     };
   }
 
-  /**
-   * Whether the connection is established
-   */
   get connected(): boolean {
     return this._connected;
   }
@@ -128,10 +98,6 @@ export class ImapConnection {
     }
   }
 
-  /**
-   * Establishes a connection to the IMAP server
-   * @returns Promise that resolves when connected
-   */
   private async establishConnection(): Promise<void> {
     try {
       if (this.options.tls) {

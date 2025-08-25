@@ -1,13 +1,6 @@
-/**
- * IMAP Response Parsers
- *
- * This module contains parsers for IMAP server responses.
- * @module
- */
-
-import { ImapParseError } from '../errors.ts';
-import type { ImapAddress, ImapEnvelope, ImapMailbox } from '../types/mod.ts';
-import { parseBodyStructure } from './bodystructure.ts';
+import type { ImapAddress, ImapEnvelope, ImapMailbox } from '~/types/mod.ts';
+import { parseBodyStructure } from '~/parsers/bodystructure.ts';
+import { ImapParseError } from '~/errors.ts';
 
 // Export bodystructure parser functions directly
 export { findAttachments, hasAttachments, parseBodyStructure } from './bodystructure.ts';

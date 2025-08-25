@@ -5,8 +5,8 @@
  * with better handling of complex multipart structures and attachments.
  */
 
-import type { ImapBodyStructure } from '../types/mod.ts';
-import { ImapParseError } from '../errors.ts';
+import type { ImapBodyStructure } from '~/types/mod.ts';
+import { ImapParseError } from '~/errors.ts';
 
 /**
  * Parses a body structure response

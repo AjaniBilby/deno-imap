@@ -1,23 +1,5 @@
-/**
- * IMAP Client
- *
- * Main implementation of the IMAP client.
- * @module
- */
-
-import * as commands from './commands/mod.ts';
-import { ImapConnection } from './connection.ts';
-import {
-  ImapAuthError,
-  ImapCapabilityError,
-  ImapCommandError,
-  ImapConnectionError,
-  ImapNoMailboxSelectedError,
-  ImapNotConnectedError,
-  ImapTimeoutError,
-} from './errors.ts';
-import * as parsers from './parsers/mod.ts';
-import { createCancellablePromise } from './utils/promises.ts';
+import * as commands from '~/commands/mod.ts';
+import * as parsers from '~/parsers/mod.ts';
 import type {
   ImapAuthMechanism,
   ImapBodyStructure,
@@ -28,7 +10,19 @@ import type {
   ImapMessagePart,
   ImapOptions,
   ImapSearchCriteria,
-} from './types/mod.ts';
+} from '~/types/mod.ts';
+import { createCancellablePromise } from '~/utils/promises.ts';
+import { ImapConnection } from '~/connection.ts';
+import {
+  ImapAuthError,
+  ImapCapabilityError,
+  ImapCommandError,
+  ImapConnectionError,
+  ImapNoMailboxSelectedError,
+  ImapNotConnectedError,
+  ImapTimeoutError,
+} from '~/errors.ts';
+
 
 /**
  * Default options for the IMAP client

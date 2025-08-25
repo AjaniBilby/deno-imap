@@ -1,21 +1,10 @@
-/**
- * Utilities module
- * @module
- */
+import type { ImapClient } from '~/client.ts';
+import type { ImapFetchOptions, ImapMessage, ImapSearchCriteria } from '~/types/mod.ts';
+import { hasAttachments } from '~/parsers/mod.ts';
 
-export * from './promises.ts';
-export * from './attachments.ts';
+export * from '~/utils/promises.ts';
+export * from '~/utils/attachments.ts';
 
-/**
- * IMAP Utilities
- *
- * This module contains utility functions for working with IMAP.
- * @module
- */
-
-import type { ImapClient } from '../client.ts';
-import type { ImapFetchOptions, ImapMessage, ImapSearchCriteria } from '../types/mod.ts';
-import { hasAttachments } from '../parsers/mod.ts';
 
 /**
  * Fetches all messages in a mailbox

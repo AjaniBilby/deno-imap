@@ -1,11 +1,4 @@
-/**
- * IMAP Commands
- *
- * This module contains functions for generating IMAP commands.
- * @module
- */
-
-import type { ImapFetchOptions, ImapSearchCriteria } from '../types/mod.ts';
+import type { ImapFetchOptions, ImapSearchCriteria } from '~/types/mod.ts';
 
 /**
  * Generates a LOGIN command

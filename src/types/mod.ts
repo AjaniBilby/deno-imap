@@ -1,11 +1,3 @@
-/**
- * Type definitions for the IMAP client
- * @module
- */
-
-/**
- * Options for configuring the IMAP client
- */
 export interface ImapOptions extends ImapConnectionOptions {
   /** Whether to automatically reconnect on connection loss */
   autoReconnect?: boolean;
@@ -17,9 +9,6 @@ export interface ImapOptions extends ImapConnectionOptions {
   commandTimeout?: number;
 }
 
-/**
- * Options for configuring the IMAP connection
- */
 export interface ImapConnectionOptions {
   /** IMAP server hostname */
   host: string;
@@ -41,14 +30,8 @@ export interface ImapConnectionOptions {
   tlsOptions?: Deno.ConnectTlsOptions;
 }
 
-/**
- * Authentication mechanisms supported by the IMAP client
- */
 export type ImapAuthMechanism = 'PLAIN' | 'LOGIN' | 'OAUTH2' | 'XOAUTH2';
 
-/**
- * Represents an IMAP mailbox (folder)
- */
 export interface ImapMailbox {
   /** Name of the mailbox */
   name: string;
@@ -70,9 +53,6 @@ export interface ImapMailbox {
   uidValidity?: number;
 }
 
-/**
- * Represents an IMAP message
- */
 export interface ImapMessage {
   /** Message sequence number */
   seq: number;
@@ -96,9 +76,6 @@ export interface ImapMessage {
   raw?: Uint8Array;
 }
 
-/**
- * Represents a part of an IMAP message
- */
 export interface ImapMessagePart {
   /** Part data */
   data: Uint8Array;
@@ -136,9 +113,6 @@ export interface ImapEnvelope {
   messageId?: string;
 }
 
-/**
- * Represents an email address in IMAP
- */
 export interface ImapAddress {
   /** Name part of the address */
   name?: string;
@@ -150,9 +124,6 @@ export interface ImapAddress {
   host?: string;
 }
 
-/**
- * Represents the structure of a message body in IMAP
- */
 export interface ImapBodyStructure {
   /** Part type */
   type: string;
@@ -188,9 +159,6 @@ export interface ImapBodyStructure {
   location?: string;
 }
 
-/**
- * Search criteria for IMAP searches
- */
 export interface ImapSearchCriteria {
   /** Search for messages with specific sequence numbers */
   seqno?: number | number[];
@@ -244,9 +212,6 @@ export interface ImapSearchCriteria {
   not?: ImapSearchCriteria;
 }
 
-/**
- * Options for fetching messages
- */
 export interface ImapFetchOptions {
   /** Whether to use UIDs instead of sequence numbers */
   byUid?: boolean;
@@ -274,9 +239,6 @@ export interface ImapFetchOptions {
   markSeen?: boolean;
 }
 
-/**
- * IMAP server capabilities
- */
 export type ImapCapability =
   | 'IMAP4'
   | 'IMAP4REV1'

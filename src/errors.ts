@@ -1,11 +1,3 @@
-/**
- * Error classes for the IMAP client
- * @module
- */
-
-/**
- * Base error class for IMAP errors
- */
 export class ImapError extends Error {
   constructor(message: string) {
     super(message);
@@ -13,9 +5,6 @@ export class ImapError extends Error {
   }
 }
 
-/**
- * Error thrown when there's an authentication failure
- */
 export class ImapAuthError extends ImapError {
   constructor(message: string) {
     super(message);
@@ -23,9 +12,6 @@ export class ImapAuthError extends ImapError {
   }
 }
 
-/**
- * Error thrown when a command fails
- */
 export class ImapCommandError extends ImapError {
   /** The command that failed */
   command: string;
@@ -43,11 +29,7 @@ export class ImapCommandError extends ImapError {
   }
 }
 
-/**
- * Error thrown when a connection fails
- */
 export class ImapConnectionError extends ImapError {
-  /** The underlying error */
   override cause?: Error;
 
   constructor(message: string, cause?: Error) {
@@ -57,9 +39,6 @@ export class ImapConnectionError extends ImapError {
   }
 }
 
-/**
- * Error thrown when a parsing error occurs
- */
 export class ImapParseError extends ImapError {
   /** The data that failed to parse */
   data: string;
@@ -71,9 +50,6 @@ export class ImapParseError extends ImapError {
   }
 }
 
-/**
- * Error thrown when a timeout occurs
- */
 export class ImapTimeoutError extends ImapError {
   /** The operation that timed out */
   operation: string;
@@ -88,9 +64,6 @@ export class ImapTimeoutError extends ImapError {
   }
 }
 
-/**
- * Error thrown when an operation is attempted on a closed connection
- */
 export class ImapNotConnectedError extends ImapError {
   constructor(message = 'Not connected to IMAP server') {
     super(message);
@@ -98,9 +71,6 @@ export class ImapNotConnectedError extends ImapError {
   }
 }
 
-/**
- * Error thrown when an operation requires a selected mailbox but none is selected
- */
 export class ImapNoMailboxSelectedError extends ImapError {
   constructor(message = 'No mailbox selected') {
     super(message);
@@ -108,9 +78,6 @@ export class ImapNoMailboxSelectedError extends ImapError {
   }
 }
 
-/**
- * Error thrown when a capability is required but not supported by the server
- */
 export class ImapCapabilityError extends ImapError {
   /** The required capability */
   capability: string;

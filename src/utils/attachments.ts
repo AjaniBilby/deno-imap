@@ -1,3 +1,6 @@
+/**
+ * @deprecated
+ */
 export function decodeAttachment(data: Uint8Array, encoding: string): Uint8Array {
   const decoder = new TextDecoder();
 

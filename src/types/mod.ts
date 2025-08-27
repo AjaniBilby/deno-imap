@@ -1,3 +1,5 @@
+import { MultipartPart } from '@mjackson/multipart-parser';
+
 export interface ImapOptions extends ImapConnectionOptions {
   /** Whether to automatically reconnect on connection loss */
   autoReconnect?: boolean;
@@ -94,7 +96,7 @@ export interface ImapEnvelope {
   /** Message date */
   date?: Date;
   /** Message subject */
-  subject?: string;
+  subject: string;
   /** Message from addresses */
   from?: ImapAddress[];
   /** Message sender addresses */
@@ -158,6 +160,8 @@ export interface ImapBodyStructure {
   language?: string | string[];
   location?: string;
 }
+
+export type ImapAttachment = ImapBodyStructure & { data: MultipartPart };
 
 export interface ImapSearchCriteria {
   /** Search for messages with specific sequence numbers */

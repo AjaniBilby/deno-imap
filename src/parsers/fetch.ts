@@ -1,28 +1,29 @@
+import { getMultipartBoundary, parseMultipart } from '@mjackson/multipart-parser';
+
 import { ExtractFirstParameterValue, GetParameterListStr, ParameterString, ParenthesizedList, ParenthesizedValue, ParseImapAddressList, ParseParenthesized } from './parameters.ts';
-import { ImapBodyStructure, ImapEnvelope } from '../types/mod.ts';
+import { ImapAttachment, ImapBodyStructure, ImapEnvelope } from '../types/mod.ts';
 import { ChunkArray } from '../utils/internal.ts';
+import { CutString } from '../utils/string.ts';
 
 
-export type FetchData = Partial<{
-	uid:   number,
+export type FetchData = {
 	seq:   number,
+	uid?:   number,
 	flags: string[],
 	size:  number,
-	internalDate: Date,
+	internalDate?: Date,
 	envelope: ImapEnvelope,
-	bodyStructure?: ImapBodyStructure[],
-	headers: Record<string, string>,
-	parts: Record<string, unknown>,
+	headers: Headers,
 
-	raw?: Uint8Array
-}>
+	body: {
+		headers: Headers,
+		attachments: Array<ImapAttachment>
+	}
+}
 
 export function ParseFetch(str: string): FetchData {
 	const seqMatch = str.match(/^\* (\d+) FETCH/i);
 	if (!seqMatch) throw new Error("Invalid fetch prefix");
-
-	const data: FetchData = {};
-	data.seq = parseInt(seqMatch[1], 10);
 
 	let offset = str.indexOf("FETCH");
 	if (offset === -1) throw new Error("unreachable");
@@ -35,6 +36,19 @@ export function ParseFetch(str: string): FetchData {
 	const list = results.val;
 	if (!Array.isArray(list)) throw new Error("Expected a list, but got an atom as fetch");
 
+	let bodyStructure: ImapBodyStructure[] = [];
+	let internalDate: Date | undefined = undefined;
+	let envelope: ImapEnvelope | undefined = undefined;
+	let flags = [] as string[];
+	let uid: number | undefined = undefined;
+	let size = -1;
+
+	const seq = parseInt(seqMatch[1], 10);
+	const headers = new Headers();
+	const body = {
+		headers: new Headers(),
+		attachments: new Array<ImapAttachment>()
+	};
 
 	offset += results.reached;
 	for (const [key, value] of ChunkArray(list, 2)) {
@@ -43,53 +57,74 @@ export function ParseFetch(str: string): FetchData {
 		switch (key) {
 			case "UID": {
 				const v = ExtractFirstParameterValue(value);
-				if (v) data.uid = parseInt(v, 10);
+				if (v) uid = parseInt(v, 10);
 				break;
 			}
 			case "FLAGS": {
-				data.flags ||= [];
+				flags ||= [];
 
-				if (typeof value === "string") data.flags.push(value);
+				if (typeof value === "string") flags.push(value);
 				else {
 					const flags = (value.filter(x => typeof x === "string") as string[])
 						.map(x => x.startsWith("\\") ? x.slice(1) : x)
 						.filter(x => x !== "");
-					data.flags.push(...flags);
+					flags.push(...flags);
 				}
 				break;
 			}
 			case "RFC822.SIZE": {
 				const v = ExtractFirstParameterValue(value);
-				if (v) data.size = parseInt(v, 10);
+				if (v) size = parseInt(v, 10);
 				break;
 			}
 			case "INTERNALDATE": {
 				const v = ExtractFirstParameterValue(value);
-				if (v) data.internalDate = new Date(v);
+				if (v) internalDate = new Date(v);
 				break;
 			}
 			case "ENVELOPE": {
-				if (Array.isArray(value)) data.envelope = ParseEnvelope(value);
+				if (Array.isArray(value)) envelope = ParseEnvelope(value);
 				break;
 			}
 			case "BODY[HEADER]": {
-				data.headers ||= {};
-
 				if (typeof value !== "string") throw new Error('Expected literal for BODY[HEADER]')
 				const raw = (value.startsWith('"') && value.endsWith('"'))
 					? value.slice(1, -1)
 					: value;
 
-				data.headers = ParseFetchHeaders(raw);
+				ParseFetchHeaders(headers, raw);
 				break;
 			}
 			case "BODYSTRUCTURE": {
 				if (!Array.isArray(value)) break;
-				data.bodyStructure = value.map(x => ParseBodyStructure(x));
+				bodyStructure = value.map(x => ParseBodyStructure(x));
 				break;
 			}
 			case "BODY[]": {
-				data.raw = new TextEncoder().encode(ParameterString(value));
+				const [ h, b ] = CutString(ParameterString(value) || "", "\r\n\r\n");
+
+				ParseFetchHeaders(body.headers, h);
+
+				const contentType = headers!.get("Content-Type") || headers!.get("Content-Type");
+				if (!contentType) break;
+
+				const boundary = getMultipartBoundary(contentType);
+				if (!boundary) break;
+
+				const buff = new TextEncoder().encode(ParameterString(b));
+				console.log(bodyStructure);
+				let i = 0;
+				for (const data of parseMultipart(buff, { boundary })) {
+					const shape = bodyStructure[i];
+					if (!shape) break;
+
+					body.attachments.push({
+						...shape,
+						data
+					})
+					i++;
+				}
+
 				break;
 			}
 			default: {
@@ -98,15 +133,29 @@ export function ParseFetch(str: string): FetchData {
 		}
 	}
 
-	return data;
+	return {
+		seq, uid, size, flags,
+		internalDate,
+
+		envelope: envelope || {
+			date: internalDate,
+			subject: "",
+			from: [],
+			sender: [],
+			replyTo: [],
+			to: [],
+			cc: [],
+			bcc: []
+		},
+
+		headers, body
+	}
 }
 
 
 
 
-export function ParseFetchHeaders(str: string): Record<string, string> {
-	const into: Record<string, string> = {};
-
+export function ParseFetchHeaders(into: Headers, str: string) {
 	let i=0;
 	while (i<str.length) {
 		const m = str.indexOf(":", i);
@@ -118,23 +167,22 @@ export function ParseFetchHeaders(str: string): Record<string, string> {
 
 		if (key.length === 0) break;
 
-		into[key] ||= "";
 
+		let val = "";
 		while (true) {
 			let e = str.indexOf("\r\n", i);
 			if (e === -1) e = str.length;
 
-			const value = str.slice(i, e).trim();
-			into[key] += value;
+			const chunk = str.slice(i, e).trim();
+			val += chunk;
 			i = e + 2;
 
 			if (str[i] !== "\t" && str[i] !== " ") break; // no more values
-			into[key] += " ";
+			val += " ";
 			i++;
 		}
+		into.set(key, val);
 	}
-
-	return into;
 }
 
 
@@ -144,8 +192,8 @@ export function ParseEnvelope(value: ParenthesizedList): ImapEnvelope {
 
 	// Format: (date subject (from) (sender) (reply-to) (to) (cc) (bcc) in-reply-to message-id)
 	return {
-		date:    date ? new Date(date) : undefined,
-		subject:   GetParameterListStr(value, 1),
+		date:      date ? new Date(date) : undefined,
+		subject:   GetParameterListStr(value, 1) || "",
 		from:      ParseImapAddressList(value[2]),
 		sender:    ParseImapAddressList(value[3]),
 		replyTo:   ParseImapAddressList(value[4]),

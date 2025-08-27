@@ -4,5 +4,5 @@ Deno.test("Secret", () => {
 	const raw = Deno.readTextFileSync("./data.txt");
 	const fetch = ParseFetch(raw);
 
-	console.log(fetch);
+	console.log(fetch.body.attachments);
 })

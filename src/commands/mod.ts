@@ -176,6 +176,7 @@ export function expunge(): string {
 
 /**
  * Generates a SEARCH command
+ * @deprecated
  * @param criteria Search criteria
  * @param charset Character set
  * @returns SEARCH command string
@@ -201,6 +202,7 @@ export function search(criteria: ImapSearchCriteria, charset?: string): string {
 
 /**
  * Generates a FETCH command
+ * @deprecated
  * @param sequence Message sequence set
  * @param options Fetch options
  * @returns FETCH command string
@@ -336,6 +338,7 @@ function formatDate(date: Date): string {
 
 /**
  * Formats search criteria for IMAP SEARCH command
+ * @deprecated
  * @param criteria Search criteria
  * @returns Formatted search criteria string
  */

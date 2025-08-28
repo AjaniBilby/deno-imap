@@ -55,10 +55,17 @@ export interface ImapMailbox {
   uidValidity?: number;
 }
 
-export interface ImapMessage {
+export type Flag = 'Answered'
+	| 'Flagged'
+	| 'Draft'
+	| 'Deleted'
+	| 'Seen'
+	| string;
+
+export type ImapMessage = {
 	seq:   number,
 	uid?:  number,
-	flags: Set<string>,
+	flags: Set<Flag>,
 	size:  number,
 	internalDate?: Date,
 	envelope: ImapEnvelope,
@@ -84,7 +91,7 @@ export interface ImapMessagePart {
 /**
  * Represents an IMAP message envelope
  */
-export interface ImapEnvelope {
+export type ImapEnvelope = {
   /** Message date */
   date?: Date;
   /** Message subject */

@@ -162,6 +162,7 @@ export function parseSelect(lines: string[]): Partial<ImapMailbox> {
 
 /**
  * Parses a search response
+ * @deprecated
  * @param line Search response line
  * @returns Array of message numbers
  */

@@ -56,26 +56,18 @@ export interface ImapMailbox {
 }
 
 export interface ImapMessage {
-  /** Message sequence number */
-  seq: number;
-  /** Message UID */
-  uid?: number;
-  /** Message flags */
-  flags?: string[];
-  /** Message size in bytes */
-  size?: number;
-  /** Message internal date */
-  internalDate?: Date;
-  /** Message envelope information */
-  envelope?: ImapEnvelope;
-  /** Message body structure */
-  bodyStructure?: ImapBodyStructure;
-  /** Message headers */
-  headers?: Record<string, string | string[]>;
-  /** Message body parts */
-  parts?: Record<string, ImapMessagePart>;
-  /** Raw message content */
-  raw?: Uint8Array;
+	seq:   number,
+	uid?:  number,
+	flags: Set<string>,
+	size:  number,
+	internalDate?: Date,
+	envelope: ImapEnvelope,
+	headers: Headers,
+
+	body: {
+		headers: Headers,
+		attachments: Array<ImapAttachment>
+	}
 }
 
 export interface ImapMessagePart {

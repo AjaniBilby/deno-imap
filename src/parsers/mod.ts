@@ -193,11 +193,5 @@ export function parseEnvelope(str: string): ImapEnvelope {
  * @returns Fetch data
  */
 export function parseFetch(lines: string[]) {
-  try {
-    return ParseFetch(lines.join("\r\n"));
-  } catch (e) {
-    console.warn('Error parsing fetch response:', e);
-  }
-
-  return {};
+  return ParseFetch(lines.join("\r\n"));
 }

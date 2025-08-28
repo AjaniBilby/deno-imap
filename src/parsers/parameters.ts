@@ -1,4 +1,4 @@
-import { SkipInlineWhiteSpace } from './util.ts';
+import { SkipWhiteSpace } from './util.ts';
 import { ImapAddress } from '../types/mod.ts';
 
 export type ParenthesizedValue = string | Array<ParenthesizedValue>;
@@ -63,11 +63,10 @@ export type ParenthesizedList  = Array<ParenthesizedValue>;
  * ```
  */
 export function ParseParenthesized(str: string, offset: number = 0): { val: ParenthesizedValue, reached: number } | undefined {
-  offset = SkipInlineWhiteSpace(str, offset);
+  offset = SkipWhiteSpace(str, offset, false);
 
   // reached the end
   if (str.length <= offset) return undefined;
-  if (str[offset] === "\n") return undefined;
 
   // single token resolution
   if (str[offset] !== "(") {
@@ -86,7 +85,7 @@ export function ParseParenthesized(str: string, offset: number = 0): { val: Pare
   }
 
   outer: while (offset < str.length) {
-    offset = SkipInlineWhiteSpace(str, offset);
+    offset = SkipWhiteSpace(str, offset);
 
     switch (str[offset]) {
       case '(': {

@@ -155,7 +155,7 @@ export class ImapConnection {
     // When the socket times out, disconnect
     this.socketActivityCancellable.promise.catch(async (error) => {
       if (error instanceof ImapTimeoutError) {
-        console.log('Socket inactivity timeout, disconnecting');
+        console.warn('Warn: Socket inactivity timeout, disconnecting');
         await this.disconnect();
       }
     });

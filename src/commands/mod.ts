@@ -209,29 +209,12 @@ export function fetch(sequence: string, options: ImapFetchOptions): string {
   const command = options.byUid ? 'UID FETCH' : 'FETCH';
   const items: string[] = [];
 
-  if (options.flags) {
-    items.push('FLAGS');
-  }
-
-  if (options.envelope) {
-    items.push('ENVELOPE');
-  }
-
-  if (options.bodyStructure) {
-    items.push('BODYSTRUCTURE');
-  }
-
-  if (options.internalDate) {
-    items.push('INTERNALDATE');
-  }
-
-  if (options.size) {
-    items.push('RFC822.SIZE');
-  }
-
-  if (options.uid) {
-    items.push('UID');
-  }
+  if (options.flags)         items.push('FLAGS');
+  if (options.envelope)      items.push('ENVELOPE');
+  if (options.bodyStructure) items.push('BODYSTRUCTURE');
+  if (options.internalDate)  items.push('INTERNALDATE');
+  if (options.size)          items.push('RFC822.SIZE');
+  if (options.uid)           items.push('UID');
 
   if (options.allHeaders) {
     items.push('BODY.PEEK[HEADER]');

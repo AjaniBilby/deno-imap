@@ -1,27 +1,11 @@
 import { getMultipartBoundary, parseMultipart } from '@mjackson/multipart-parser';
 
 import { ExtractFirstParameterValue, GetParameterListStr, ParameterString, ParenthesizedList, ParenthesizedValue, ParseImapAddressList, ParseParenthesized } from './parameters.ts';
-import { ImapAttachment, ImapBodyStructure, ImapEnvelope } from '../types/mod.ts';
+import { ImapAttachment, ImapBodyStructure, ImapEnvelope, ImapMessage } from '../types/mod.ts';
 import { ChunkArray } from '../utils/internal.ts';
 import { CutString } from '../utils/string.ts';
 
-
-export type FetchData = {
-	seq:   number,
-	uid?:   number,
-	flags: string[],
-	size:  number,
-	internalDate?: Date,
-	envelope: ImapEnvelope,
-	headers: Headers,
-
-	body: {
-		headers: Headers,
-		attachments: Array<ImapAttachment>
-	}
-}
-
-export function ParseFetch(str: string): FetchData {
+export function ParseFetch(str: string): ImapMessage {
 	const seqMatch = str.match(/^\* (\d+) FETCH/i);
 	if (!seqMatch) throw new Error("Invalid fetch prefix");
 
@@ -39,10 +23,10 @@ export function ParseFetch(str: string): FetchData {
 	let bodyStructure: ImapBodyStructure[] = [];
 	let internalDate: Date | undefined = undefined;
 	let envelope: ImapEnvelope | undefined = undefined;
-	let flags = [] as string[];
 	let uid: number | undefined = undefined;
 	let size = -1;
 
+	const flags = new Set<string>();
 	const seq = parseInt(seqMatch[1], 10);
 	const headers = new Headers();
 	const body = {
@@ -56,19 +40,24 @@ export function ParseFetch(str: string): FetchData {
 
 		switch (key) {
 			case "UID": {
+				console.log(value);
 				const v = ExtractFirstParameterValue(value);
 				if (v) uid = parseInt(v, 10);
 				break;
 			}
 			case "FLAGS": {
-				flags ||= [];
+				if (typeof value === "string") {
+					flags.add(value);
+					break;
+				}
 
-				if (typeof value === "string") flags.push(value);
-				else {
-					const flags = (value.filter(x => typeof x === "string") as string[])
-						.map(x => x.startsWith("\\") ? x.slice(1) : x)
-						.filter(x => x !== "");
-					flags.push(...flags);
+				for (const v of value) {
+					if (typeof v !== "string") continue;
+
+					const flag = v.startsWith("\\") ? v.slice(1) : v;
+					if (flag === "") continue;
+
+					flags.add(flag);
 				}
 				break;
 			}
@@ -112,7 +101,6 @@ export function ParseFetch(str: string): FetchData {
 				if (!boundary) break;
 
 				const buff = new TextEncoder().encode(ParameterString(b));
-				console.log(bodyStructure);
 				let i = 0;
 				for (const data of parseMultipart(buff, { boundary })) {
 					const shape = bodyStructure[i];

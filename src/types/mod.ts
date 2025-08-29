@@ -67,7 +67,7 @@ export type ImapMessage = {
 	uid?:  number,
 	flags: Set<Flag>,
 	size:  number,
-	internalDate?: Date,
+	receivedDate?: Date,
 	envelope: ImapEnvelope,
 	headers: Headers,
 
@@ -97,17 +97,17 @@ export type ImapEnvelope = {
   /** Message subject */
   subject: string;
   /** Message from addresses */
-  from?: ImapAddress[];
+  from: ImapAddress[];
   /** Message sender addresses */
-  sender?: ImapAddress[];
+  sender: ImapAddress[];
   /** Message reply-to addresses */
-  replyTo?: ImapAddress[];
+  replyTo: ImapAddress[];
   /** Message to addresses */
-  to?: ImapAddress[];
+  to: ImapAddress[];
   /** Message cc addresses */
-  cc?: ImapAddress[];
+  cc: ImapAddress[];
   /** Message bcc addresses */
-  bcc?: ImapAddress[];
+  bcc: ImapAddress[];
   /** Message in-reply-to header */
   inReplyTo?: string;
   /** Message ID */

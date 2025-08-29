@@ -231,7 +231,7 @@ function createMockClient(): ImapClient {
   };
 
   // Override the fetch method
-  client.fetch = async function (sequence: string, options: any) {
+  client.#fetch = async function (sequence: string, options: any) {
     if (!(this as any)._connected) {
       throw new ImapNotConnectedError();
     }
@@ -572,7 +572,7 @@ Deno.test('ImapClient - Test 7: Fetch messages', async () => {
   await client.authenticate();
   await client.selectMailbox('INBOX');
 
-  const messages = await client.fetch('3', { envelope: true, flags: true });
+  const messages = await client.#fetch('3', { envelope: true, flags: true });
   assertEquals(messages.length, 1);
   assertEquals(messages[0].seq, 3);
   assertEquals(messages[0].uid, 3);
@@ -625,7 +625,7 @@ Deno.test('ImapClient - Test 8: Operations not allowed without connection', asyn
 
   // Fetch without connection
   await assertRejects(
-    async () => await client.fetch('1', { flags: true }),
+    async () => await client.#fetch('1', { flags: true }),
     ImapNotConnectedError,
   );
 
@@ -635,7 +635,7 @@ Deno.test('ImapClient - Test 8: Operations not allowed without connection', asyn
   await mockClient.authenticate();
 
   await assertRejects(
-    async () => await mockClient.fetch('1', { flags: true }),
+    async () => await mockClient.#fetch('1', { flags: true }),
     ImapNoMailboxSelectedError,
   );
 

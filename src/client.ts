@@ -407,7 +407,7 @@ export class ImapClient {
 	async findMany<T extends engine.FindManyImapMessageArgs>(mailbox: string, args: T): Promise<engine.FindManyResult<T>> {
 		await this.selectMailbox(mailbox);
 
-		const out: engine.FindManyResult<T> = [];
+		const out: ImapMessage[] = [];
 		const include = args?.include || engine.INCLUDE_ALL;
 
 		// ensure values to resolve the where are present
@@ -427,20 +427,58 @@ export class ImapClient {
 		const query = args.where ? engine.MakeWhereQuery(args.where) : "";
 
 		const response = await this.#executeCommand(`SEARCH ${query || "ALL"}`);
-		const result = response.find(x => x.startsWith("* SEARCH "));
-		if (!result) return out;
+		const result = response.find(x => x.startsWith("* SEARCH"));
+
+		if (!result) return out as engine.FindManyResult<T>;
 
 		const ids = result
-			.slice("* SEARCH ".length)
+			.slice("* SEARCH".length)
 			.trim()
 			.split(' ')
 			.filter(Boolean)
 			.map(x => parseInt(x, 10))
 			.filter(x => !isNaN(x));
 
-		if (orderBy.fetch) ids.sort(orderBy.fetch);
+		if (ids.length < 1) return out as engine.FindManyResult<T>;
 
-		return out;
+		// fetch efficiently
+		if (orderBy.fetch) ids.sort(orderBy.fetch);
+		const take = args.take || ids.length;
+
+
+		let cursor = 0;
+		while (cursor < ids.length) {
+			const batchSize = Math.max(10, Math.min(take, ids.length - cursor, 50));
+
+			const batch = await this.fetch(ids.slice(cursor, cursor+batchSize).join(","), {
+				envelope:      include.envelope,
+				uid:           include.uid,
+				bodyStructure: include.body,
+				internalDate:  include.receivedDate,
+				allHeaders:    include.headers,
+				flags:         include.flags,
+				full:          include.body
+			});
+
+			for (const mail of batch) {
+				if (args.where && !engine.MatchesWhere(args.where, mail)) continue;
+				out.push(mail);
+			}
+
+			cursor += batchSize;
+
+
+			// shrink the array if over fitted
+			if (out.length > take) {
+				out.length = take;
+				if (orderBy.limited) break; // we know we've seen everything we need
+			}
+
+			if (orderBy.sort) out.sort(orderBy.sort)
+		}
+
+
+		return out as engine.FindManyResult<T>;
 	}
 
 	async findFirst<T extends engine.FindManyImapMessageArgs>(mailbox: string, args: T): Promise<engine.FindManyResult<T>[number] | undefined> {
@@ -498,6 +536,7 @@ export class ImapClient {
 
 	/**
 	 * Fetches messages
+	 * @deprecated
 	 * @param sequence Message sequence set
 	 * @param options Fetch options
 	 * @returns Promise that resolves with the messages
@@ -577,6 +616,7 @@ export class ImapClient {
 				console.warn('Failed to parse FETCH response:', error);
 			}
 		}
+
 
 		return messages;
 	}
@@ -814,7 +854,7 @@ export class ImapClient {
 						if (this.#options.autoReconnect) {
 							try {
 								await this.#reconnect();
-								console.log('Reconnected after command timeout');
+								console.info('Reconnected after command timeout');
 							} catch (reconnectError) {
 								throw new ImapConnectionError(
 									`Command timed out and reconnection failed: ${error.message}`,
@@ -849,7 +889,7 @@ export class ImapClient {
 				if (this.#options.autoReconnect) {
 					try {
 						await this.#reconnect();
-						console.log('Reconnected after command timeout');
+						console.info('Reconnected after command timeout');
 					} catch (reconnectError) {
 						throw new ImapConnectionError(
 							`Command timed out and reconnection failed: ${error.message}`,
@@ -909,7 +949,7 @@ export class ImapClient {
 			// Try to reconnect with exponential backoff
 			while (this.#reconnectAttempts < this.#options.maxReconnectAttempts!) {
 				try {
-					console.log(
+					console.info(
 						`Reconnection attempt ${
 							this.#reconnectAttempts + 1
 						}/${this.#options.maxReconnectAttempts}...`,
@@ -938,7 +978,7 @@ export class ImapClient {
 							await this.selectMailbox(previousMailbox);
 						}
 
-						console.log('Reconnection successful');
+						console.info('Reconnection successful');
 						this.#reconnectAttempts = 0;
 						return;
 					}

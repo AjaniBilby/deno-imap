@@ -69,7 +69,7 @@ async function main() {
     const messageNumber = inbox.exists;
     console.log(`\nFetching message #${messageNumber}...`);
 
-    const messages = await client.fetch(messageNumber.toString(), {
+    const messages = await client.#fetch(messageNumber.toString(), {
       envelope: true,
       flags: true,
       bodyParts: ['HEADER', 'TEXT'],

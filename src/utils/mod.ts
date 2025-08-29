@@ -7,6 +7,7 @@ export * from '../utils/attachments.ts';
 
 /**
  * Fetches all messages in a mailbox
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param options Fetch options
@@ -36,6 +37,7 @@ export async function fetchAllMessages(
 
 /**
  * Fetches messages matching search criteria
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param criteria Search criteria
@@ -67,6 +69,7 @@ export async function searchAndFetchMessages(
 
 /**
  * Fetches unread messages
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param options Fetch options
@@ -96,6 +99,7 @@ export async function fetchUnreadMessages(
 
 /**
  * Fetches messages from a specific sender
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param sender Sender email address
@@ -118,6 +122,7 @@ export async function fetchMessagesFromSender(
 
 /**
  * Fetches messages with a specific subject
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param subject Subject to search for
@@ -140,6 +145,7 @@ export async function fetchMessagesWithSubject(
 
 /**
  * Fetches messages received since a specific date
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param since Date to search from
@@ -162,6 +168,7 @@ export async function fetchMessagesSince(
 
 /**
  * Fetches messages with attachments
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param options Fetch options
@@ -191,6 +198,7 @@ export async function fetchMessagesWithAttachments(
 
 /**
  * Marks messages as read
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param messageIds Message IDs to mark as read
@@ -216,6 +224,7 @@ export async function markMessagesAsRead(
 
 /**
  * Marks messages as unread
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param messageIds Message IDs to mark as unread
@@ -241,6 +250,7 @@ export async function markMessagesAsUnread(
 
 /**
  * Deletes messages
+ * @deprecated
  * @param client IMAP client
  * @param mailbox Mailbox name
  * @param messageIds Message IDs to delete
@@ -269,6 +279,7 @@ export async function deleteMessages(
 
 /**
  * Moves messages to another mailbox
+ * @deprecated
  * @param client IMAP client
  * @param sourceMailbox Source mailbox name
  * @param targetMailbox Target mailbox name
@@ -296,6 +307,7 @@ export async function moveMessages(
 
 /**
  * Creates a mailbox hierarchy
+ * @deprecated
  * @param client IMAP client
  * @param path Mailbox path
  * @param delimiter Delimiter to use
@@ -329,6 +341,7 @@ export async function createMailboxHierarchy(
 
 /**
  * Gets all mailboxes in a hierarchy
+ * @deprecated
  * @param client IMAP client
  * @param reference Reference name (usually empty string)
  * @param pattern Mailbox name pattern

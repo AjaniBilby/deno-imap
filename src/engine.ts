@@ -1,4 +1,5 @@
-import { ImapMessage } from './types/mod.ts';
+import { ImapAddress, ImapMessage } from './types/mod.ts';
+import { CutString } from './utils/string.ts';
 
 type Flag = 'Answered'
 	| 'Flagged'
@@ -7,7 +8,7 @@ type Flag = 'Answered'
 	| 'Seen'
 	| string;
 
-type WhereValue<T> = T | { in?: T[], notIn?: T[], gte?: T, lte?: T, gt?: T, lt?: T };
+type WhereValue<T> = T | { in?: T[], notIn?: T[], gte?: T, lte?: T, gt?: T, lt?: T, eq?: T };
 type WhereScalar<T> = {
 	has?:      T,
 	hasEvery?: T[],
@@ -18,9 +19,12 @@ type WhereScalar<T> = {
 type WhereText = string | {
 	contains?:   string,
 	startsWith?: string,
-	endsWith?:   string
+	endsWith?:   string,
+	equals?:     string,
 	mode?: "insensitive",
 }
+
+type AddressCriteria = string | Partial<ImapAddress>;
 
 type ImapMessageWhere = {
 	seq?:          WhereValue<number>,
@@ -32,12 +36,12 @@ type ImapMessageWhere = {
 	envelope?: {
 		date?:      WhereValue<Date>,
 		subject?:   WhereText,
-		from?:      WhereText,
-		sender?:    WhereText,
-		replyTo?:   WhereText,
-		to?:        WhereScalar<string>,
-		cc?:        WhereScalar<string>,
-		bcc?:       WhereScalar<string>,
+		from?:      WhereScalar<AddressCriteria>,
+		sender?:    WhereScalar<AddressCriteria>,
+		replyTo?:   WhereScalar<AddressCriteria>,
+		to?:        WhereScalar<AddressCriteria>,
+		cc?:        WhereScalar<AddressCriteria>,
+		bcc?:       WhereScalar<AddressCriteria>,
 		inReplyTo?: WhereText,
 		messageId?: WhereText,
 	}
@@ -84,6 +88,14 @@ export type FindManyResult<T extends FindManyImapMessageArgs> =
 	T['include'] extends ImapMessageInclude
 		? GetIncludeResult<T['include']>[]
 		: ImapMessage[];
+
+
+
+
+
+/* ======================================================
+	Search Query Generation
+====================================================== */
 
 export function MakeWhereQuery(where: ImapMessageWhere) {
 	let query = "";
@@ -137,33 +149,33 @@ export function MakeWhereQuery(where: ImapMessageWhere) {
 		}
 
 		if (where.envelope.from) {
-			const term = GetTextSearchTerm(where.envelope.from);
-			if (term) query += ` FROM ${term}`;
+			const set = MakeAddressSet(where.envelope.from);
+			for (const a of set) query += ` FROM "${a}"`;
 		}
 
 		if (where.envelope.to) {
-			const terms = GetScalarSearchTerms(where.envelope.to);
-			for (const term of terms) query += ` TO ${QuoteString(term)}`;
+			const set = MakeAddressSet(where.envelope.to);
+			for (const a of set) query += ` TO "${a}"`;
 		}
 
 		if (where.envelope.cc) {
-			const terms = GetScalarSearchTerms(where.envelope.cc);
-			for (const term of terms) query += ` CC ${QuoteString(term)}`;
+			const set = MakeAddressSet(where.envelope.cc);
+			for (const a of set) query += ` CC "${a}"`;
 		}
 
 		if (where.envelope.bcc) {
-			const terms = GetScalarSearchTerms(where.envelope.bcc);
-			for (const term of terms) query += ` BCC ${QuoteString(term)}`;
+			const set = MakeAddressSet(where.envelope.bcc);
+			for (const a of set) query += ` BCC "${a}"`;
 		}
 
 		if (where.envelope.sender) {
-			const term = GetTextSearchTerm(where.envelope.sender);
-			if (term) query += ` HEADER SENDER ${term}`;
+			const set = MakeAddressSet(where.envelope.sender);
+			for (const a of set) query += ` SENDER "${a}"`;
 		}
 
 		if (where.envelope.replyTo) {
-			const term = GetTextSearchTerm(where.envelope.replyTo);
-			if (term) query += ` REPLY-TO ${term}`;
+			const set = MakeAddressSet(where.envelope.replyTo);
+			for (const a of set) query += ` REPLY-TO "${a}"`;
 		}
 
 		if (where.envelope.messageId) {
@@ -233,16 +245,16 @@ function GetTextSearchTerm(textWhere: WhereText): string | null {
 	return null;
 }
 
-function GetScalarSearchTerms(scalarWhere: WhereScalar<string>): string[] {
-	const terms: string[] = [];
-
-	if (scalarWhere.has) terms.push(scalarWhere.has);
-	if (scalarWhere.hasEvery) terms.push(...scalarWhere.hasEvery);
-	if (scalarWhere.hasSome) terms.push(...scalarWhere.hasSome);
-	// hasNone would need NOT logic, which is complex for scalar fields
-
-	return terms;
-}
+// function GetScalarSearchTerms(scalarWhere: WhereScalar<string>): string[] {
+// 	const terms: string[] = [];
+//
+// 	if (scalarWhere.has) terms.push(scalarWhere.has);
+// 	if (scalarWhere.hasEvery) terms.push(...scalarWhere.hasEvery);
+// 	if (scalarWhere.hasSome)  terms.push(...scalarWhere.hasSome);
+// 	// hasNone would need NOT logic, which is complex for scalar fields
+//
+// 	return terms;
+// }
 
 function QuoteString(str: string): string {
 	// IMAP strings need to be quoted if they contain spaces or special chars
@@ -264,7 +276,211 @@ function AddSafeFlag(into: Set<string>, raw: string) {
 	into.add(raw);
 }
 
+const SAFE_ADDRESS_PATTERN = new RegExp("^[a-z\\-\\_\\.]+$", "i");
+function AddSafeAddress(into: Set<string>, val: ImapAddress | string) {
+	if (typeof val === "string") {
+		const [ mailbox, host ] = CutString(val, "@");
+		val = { host, mailbox };
+	}
 
+	if (!val.host) return;
+	if (!val.mailbox) return;
+
+	if (!SAFE_ADDRESS_PATTERN.test(val.mailbox)) return undefined;
+	if (!SAFE_ADDRESS_PATTERN.test(val.host)) return undefined;
+
+	into.add(`${val.mailbox}@${val.host}`);
+}
+
+function MakeAddressSet(criteria: WhereScalar<AddressCriteria>) {
+	const into = new Set<string>();
+
+	if (criteria.has) AddSafeAddress(into, criteria.has);
+	if (criteria.hasEvery) for (const a of criteria.hasEvery) AddSafeAddress(into, a);
+	if (criteria.hasSome?.length === 1) AddSafeAddress(into, criteria.hasSome[0]);
+
+	return into;
+}
+
+
+
+
+
+/* ======================================================
+	Where Clause evaluation
+====================================================== */
+export function MatchesWhere(where: ImapMessageWhere, mail: ImapMessage) {
+
+	if (!MatchWhereValue(where.seq,  mail.seq)) return false;
+	if (!MatchWhereValue(where.uid,  mail.seq)) return false;
+	if (!MatchWhereValue(where.size, mail.seq)) return false;
+
+	if (!MatchWhereValue(where.receivedDate, mail.receivedDate)) return false;
+
+	if (where.flags) {
+		if (where.flags.has && !mail.flags.has(where.flags.has)) return false;
+
+		if (where.flags.hasEvery) for (const f of where.flags.hasEvery) {
+			if (!mail.flags.has(f)) return false;
+		}
+
+		if (where.flags.hasNone) for (const f of where.flags.hasNone) {
+			if (mail.flags.has(f)) return false;
+		}
+
+		if (where.flags.hasSome) {
+			let some = false;
+			for (const f of where.flags.hasSome) {
+				if (mail.flags.has(f)) {
+					some = true;
+					break;
+				}
+			}
+
+			if (!some) return false
+		}
+	}
+
+	if (where.envelope) {
+		if (!mail.envelope) return false;
+
+		if (!MatchWhereValue(where.envelope.date, mail.envelope.date)) return false;
+		if (!MatchWhereText(where.envelope.subject, mail.envelope.subject)) return false;
+		if (!MatchWhereScalar(where.envelope.from, mail.envelope.from, AddressComparator)) return false;
+		if (!MatchWhereScalar(where.envelope.sender, mail.envelope.sender, AddressComparator)) return false;
+		if (!MatchWhereScalar(where.envelope.replyTo, mail.envelope.replyTo, AddressComparator)) return false;
+		if (!MatchWhereScalar(where.envelope.to, mail.envelope.to, AddressComparator)) return false;
+		if (!MatchWhereScalar(where.envelope.cc, mail.envelope.cc, AddressComparator)) return false;
+		if (!MatchWhereScalar(where.envelope.bcc, mail.envelope.bcc, AddressComparator)) return false;
+		if (!MatchWhereText(where.envelope.inReplyTo, mail.envelope.inReplyTo)) return false;
+		if (!MatchWhereText(where.envelope.messageId, mail.envelope.messageId)) return false;
+	}
+
+	return true;
+}
+
+function MatchWhereValue<T extends string | number | Date>(where: WhereValue<T> | undefined, val?: T): boolean {
+	if (where === undefined) return true;
+	if (val === undefined)   return false;
+
+	if (val instanceof Date) {
+		const rule = (where as WhereValue<Date>);
+		if (rule instanceof Date) return rule === val;
+
+		if (rule.notIn) console.warn("where.notIn not supported with dates");
+		if (rule.in)    console.warn("where.in not supported with dates");
+
+		if (rule.gte && rule.gte.getTime() <  val.getTime()) return false;
+		if (rule.gt  && rule.gt.getTime()  <= val.getTime()) return false;
+		if (rule.lte && rule.lte.getTime() >  val.getTime()) return false;
+		if (rule.lt  && rule.lt.getTime()  >= val.getTime()) return false;
+		if (rule.eq  && rule.eq.getTime()  != val.getTime()) return false;
+
+		return true;
+	}
+
+	if (typeof val === "string") {
+		const rule = (where as WhereValue<string>);
+		if (typeof rule === "string") return rule === val;
+
+		if (rule.notIn &&  rule.notIn.includes(val)) return false;
+		if (rule.in    && !rule.in.includes(val)) return false;
+
+		if (rule.gte) console.warn("where.gte not supported with strings");
+		if (rule.gt ) console.warn("where.gte not supported with strings");
+		if (rule.lte) console.warn("where.gte not supported with strings");
+		if (rule.lt ) console.warn("where.gte not supported with strings");
+		if (rule.eq  && rule.eq  != val) return false;
+
+		return true;
+	}
+
+	if (typeof val === "number") {
+		const rule = (where as WhereValue<number>);
+		if (typeof rule === "number") return rule === val;
+
+		if (rule.notIn &&  rule.notIn.includes(val)) return false;
+		if (rule.in    && !rule.in.includes(val)) return false;
+
+		if (rule.gte && rule.gte <  val) return false;
+		if (rule.gt  && rule.gt  <= val) return false;
+		if (rule.lte && rule.lte >  val) return false;
+		if (rule.lt  && rule.lt  >= val) return false;
+		if (rule.eq  && rule.eq  != val) return false;
+		if (rule.eq  && rule.eq  != val) return false;
+
+		return true;
+	}
+
+	throw new Error(`Unexpected type ${typeof val}`);
+}
+
+function MatchWhereText(where?: WhereText | undefined, txt?: string) {
+	if (where === undefined) return true;
+	if (txt === undefined) return false;
+
+	if (typeof where === "string") return txt === where;
+
+	if (where.mode === "insensitive") txt = txt.toLowerCase();
+
+	if (where.startsWith && !txt.startsWith(where.startsWith)) return false;
+	if (where.endsWith   && !txt.endsWith(where.endsWith))     return false;
+	if (where.contains   && !txt.includes(where.contains))     return false;
+	if (where.endsWith   && txt !== where.endsWith)            return false;
+
+	return true;
+}
+
+function MatchWhereScalar<T, X>(where: WhereScalar<T> | undefined, value: X[], comparator: (v: X, r: T) => boolean) {
+	if (where === undefined) return true;
+
+	if (where.has && !value.some(x => comparator(x, where.has!))) return false;
+
+	if (where.hasEvery) for (const r of where.hasEvery) {
+		if (!value.some(x => comparator(x, r))) return false;
+	}
+
+	if (where.hasNone) for (const r of where.hasNone) {
+		if (value.some(x => comparator(x, r))) return false;
+	}
+
+	if (where.hasSome) {
+		let hit = false;
+		for (const r of where.hasSome) {
+			if (value.some(x => comparator(x, r))) {
+				hit = true;
+				break;
+			}
+		}
+
+		if (!hit) return false;
+	}
+
+	return true;
+}
+
+
+function AddressComparator(address: ImapAddress, rule: AddressCriteria) {
+	if (typeof rule === "string") return `${address.mailbox}@${address.host}` === rule;
+
+	if (rule.sourceRoute && address.sourceRoute !== rule.sourceRoute) return false;
+	if (rule.mailbox     && address.mailbox     !== rule.mailbox    ) return false;
+	if (rule.name        && address.name        !== rule.name       ) return false;
+	if (rule.host        && address.host        !== rule.host       ) return false;
+
+	return true;
+}
+
+function NumberComparator(a: number, b: number) {
+	return a === b;
+}
+
+
+
+
+/* ======================================================
+	Sort Factor Generation
+====================================================== */
 
 type ComparatorInstruction = {
 	fieldName: string;

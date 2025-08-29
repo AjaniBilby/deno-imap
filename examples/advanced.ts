@@ -89,7 +89,7 @@ async function main() {
       console.log(`Fetching content for message #${message.seq}`);
 
       // Fetch the full message content
-      const fullMessages = await client.fetch(
+      const fullMessages = await client.#fetch(
         message.seq.toString(),
         { full: true, markSeen: false },
       );

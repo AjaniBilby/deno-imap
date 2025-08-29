@@ -59,7 +59,7 @@ try {
   }:${messageCount}`;
   console.log(`Fetching ${fetchCount} most recent messages (${fetchRange})...`);
 
-  const messages = await client.fetch(fetchRange, {
+  const messages = await client.#fetch(fetchRange, {
     envelope: true,
     bodyStructure: true,
   });
@@ -105,7 +105,7 @@ try {
 
         try {
           // Fetch the attachment using the client's fetch method with bodyParts
-          const fetchResult = await client.fetch(`${message.seq}`, {
+          const fetchResult = await client.#fetch(`${message.seq}`, {
             bodyParts: [attachment.section],
           });
 

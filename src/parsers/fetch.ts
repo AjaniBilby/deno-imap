@@ -40,7 +40,6 @@ export function ParseFetch(str: string): ImapMessage {
 
 		switch (key) {
 			case "UID": {
-				console.log(value);
 				const v = ExtractFirstParameterValue(value);
 				if (v) uid = parseInt(v, 10);
 				break;
@@ -123,7 +122,7 @@ export function ParseFetch(str: string): ImapMessage {
 
 	return {
 		seq, uid, size, flags,
-		internalDate,
+		receivedDate: internalDate,
 
 		envelope: envelope || {
 			date: internalDate,

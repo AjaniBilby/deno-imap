@@ -284,8 +284,8 @@ function MakeAddressSet(criteria: WhereScalar<AddressCriteria>) {
   Where Clause evaluation
 ====================================================== */
 export function MatchesWhere(where: ImapMessageWhere, mail: ImapMessage) {
-  if (!MatchWhereValue(where.seq,  mail.seq))  return false;
-  if (!MatchWhereValue(where.uid,  mail.uid))  return false;
+  if (!MatchWhereValue(where.seq, mail.seq)) return false;
+  if (!MatchWhereValue(where.uid, mail.uid)) return false;
   if (!MatchWhereValue(where.size, mail.size)) return false;
 
   if (!MatchWhereValue(where.receivedDate, mail.receivedDate)) return false;

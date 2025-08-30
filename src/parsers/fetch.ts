@@ -101,7 +101,7 @@ export function ParseFetch(str: string): ImapMessage {
 
         ParseHeaders(h, body.headers);
 
-        const contentType = headers!.get('Content-Type') || headers!.get('Content-Type');
+        const contentType = headers!.get('Content-Type') || body.headers!.get('Content-Type');
         if (!contentType) {
           console.warn('Warn: attempting to decode imap body without content type');
           break;

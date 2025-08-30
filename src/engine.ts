@@ -284,9 +284,9 @@ function MakeAddressSet(criteria: WhereScalar<AddressCriteria>) {
   Where Clause evaluation
 ====================================================== */
 export function MatchesWhere(where: ImapMessageWhere, mail: ImapMessage) {
-  if (!MatchWhereValue(where.seq, mail.seq)) return false;
-  if (!MatchWhereValue(where.uid, mail.seq)) return false;
-  if (!MatchWhereValue(where.size, mail.seq)) return false;
+  if (!MatchWhereValue(where.seq,  mail.seq))  return false;
+  if (!MatchWhereValue(where.uid,  mail.uid))  return false;
+  if (!MatchWhereValue(where.size, mail.size)) return false;
 
   if (!MatchWhereValue(where.receivedDate, mail.receivedDate)) return false;
 
@@ -391,7 +391,6 @@ function MatchWhereValue<T extends string | number | Date>(
     if (rule.lte && rule.lte > val) return false;
     if (rule.lt && rule.lt >= val) return false;
     if (rule.eq && rule.eq != val) return false;
-    if (rule.eq && rule.eq != val) return false;
 
     return true;
   }
@@ -410,7 +409,7 @@ function MatchWhereText(where?: WhereText | undefined, txt?: string) {
   if (where.startsWith && !txt.startsWith(where.startsWith)) return false;
   if (where.endsWith && !txt.endsWith(where.endsWith)) return false;
   if (where.contains && !txt.includes(where.contains)) return false;
-  if (where.endsWith && txt !== where.endsWith) return false;
+  if (where.equals && txt !== where.equals) return false;
 
   return true;
 }

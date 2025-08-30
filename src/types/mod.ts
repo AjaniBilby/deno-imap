@@ -53,27 +53,28 @@ export interface ImapMailbox {
   uidValidity?: number;
 }
 
-export type Flag = 'Answered'
-	| 'Flagged'
-	| 'Draft'
-	| 'Deleted'
-	| 'Seen'
-	| string;
+export type Flag =
+  | 'Answered'
+  | 'Flagged'
+  | 'Draft'
+  | 'Deleted'
+  | 'Seen'
+  | string;
 
 export type ImapMessage = {
-	seq:   number,
-	uid?:  number,
-	flags: Set<Flag>,
-	size:  number,
-	receivedDate?: Date,
-	envelope: ImapEnvelope,
-	headers: Headers,
+  seq: number;
+  uid?: number;
+  flags: Set<Flag>;
+  size: number;
+  receivedDate?: Date;
+  envelope: ImapEnvelope;
+  headers: Headers;
 
-	body: {
-		headers: Headers,
-		attachments: Array<ImapAttachment>
-	}
-}
+  body: {
+    headers: Headers;
+    attachments: Array<ImapAttachment>;
+  };
+};
 
 export interface ImapMessagePart {
   /** Part data */
@@ -110,7 +111,7 @@ export type ImapEnvelope = {
   inReplyTo?: string;
   /** Message ID */
   messageId?: string;
-}
+};
 
 export interface ImapAddress {
   /** Name part of the address */
@@ -150,18 +151,18 @@ export interface ImapBodyStructure {
   md5?: string;
 
   disposition: {
-    type: string,
-    parameters: Record<string, string>
-  }
+    type: string;
+    parameters: Record<string, string>;
+  };
 
   language?: string | string[];
   location?: string;
 }
 
 export type ImapAttachment = {
-  mimetype: string,
-  filename: string,
-  data: Uint8Array,
+  mimetype: string;
+  filename: string;
+  data: Uint8Array;
 };
 
 export interface ImapSearchCriteria {

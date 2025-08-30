@@ -13,7 +13,7 @@ Deno.test('ParseParenthesizedList - Basic functionality', () => {
   assertEquals(ParseParenthesized('(hello)')?.val, ['hello']);
 
   // No opening parenthesis
-  assertEquals(ParseParenthesized('hello world')?.val, "hello");
+  assertEquals(ParseParenthesized('hello world')?.val, 'hello');
 });
 
 Deno.test('ParseParenthesizedList - Nested structures', () => {
@@ -114,7 +114,7 @@ Deno.test('ParseParenthesizedList - Offset parameter', () => {
   assertEquals(result, ['a', 'b', 'c']);
 
   // Invalid offset
-  assertEquals(ParseParenthesized(str, 0)?.val, "prefix");
+  assertEquals(ParseParenthesized(str, 0)?.val, 'prefix');
 });
 
 Deno.test('ParseParenthesizedList - Whitespace handling', () => {

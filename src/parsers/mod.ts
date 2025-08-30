@@ -7,7 +7,6 @@ export { findAttachments, hasAttachments, parseBodyStructure } from './bodystruc
 import { ParseParenthesized } from './parameters.ts';
 import { ParseEnvelope } from './fetch.ts';
 
-
 /**
  * Parses a capability response
  * @param line Capability response line
@@ -183,7 +182,7 @@ export function parseSearch(line: string): number[] {
 
 export function parseEnvelope(str: string): ImapEnvelope {
   const params = ParseParenthesized(str);
-  if (!params || !Array.isArray(params)) throw new Error("Invalid S-Expression given");
+  if (!params || !Array.isArray(params)) throw new Error('Invalid S-Expression given');
 
   return ParseEnvelope(params);
 }
@@ -194,5 +193,5 @@ export function parseEnvelope(str: string): ImapEnvelope {
  * @returns Fetch data
  */
 export function parseFetch(lines: string[]) {
-  return ParseFetch(lines.join("\r\n"));
+  return ParseFetch(lines.join('\r\n'));
 }

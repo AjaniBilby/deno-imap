@@ -11,7 +11,7 @@ import { ParseBodyStructure } from './fetch.ts';
 
 export function parseBodyStructure(data: string): ImapBodyStructure {
   const syntax = ParseParenthesized(data);
-  if (!syntax) throw new Error("Failed to parse body structure syntax");
+  if (!syntax) throw new Error('Failed to parse body structure syntax');
 
   return ParseBodyStructure(syntax.val);
 

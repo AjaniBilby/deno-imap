@@ -2,7 +2,7 @@ import { SkipWhiteSpace } from './util.ts';
 import { ImapAddress } from '../types/mod.ts';
 
 export type ParenthesizedValue = string | Array<ParenthesizedValue>;
-export type ParenthesizedList  = Array<ParenthesizedValue>;
+export type ParenthesizedList = Array<ParenthesizedValue>;
 
 /**
  * Parses IMAP parameters from either a parenthesized list or a single token.
@@ -62,14 +62,17 @@ export type ParenthesizedList  = Array<ParenthesizedValue>;
  * // Returns: ['NIL', '"x"', '"abc"']
  * ```
  */
-export function ParseParenthesized(str: string, offset: number = 0): { val: ParenthesizedValue, reached: number } | undefined {
+export function ParseParenthesized(
+  str: string,
+  offset: number = 0,
+): { val: ParenthesizedValue; reached: number } | undefined {
   offset = SkipWhiteSpace(str, offset, false);
 
   // reached the end
   if (str.length <= offset) return undefined;
 
   // single token resolution
-  if (str[offset] !== "(") {
+  if (str[offset] !== '(') {
     const token = TryAtom(str, offset);
     if (token) return token;
     return undefined;
@@ -119,36 +122,33 @@ export function ParseParenthesized(str: string, offset: number = 0): { val: Pare
   return { val: tree, reached: offset };
 }
 
-
-
-
 function TryAtom(str: string, offset: number = 0) {
-  return TryString(str, offset)
-    || TryLiteral(str, offset)
-    || TryKeyword(str, offset);
+  return TryString(str, offset) ||
+    TryLiteral(str, offset) ||
+    TryKeyword(str, offset);
 }
 
-function TryLiteral (str: string, offset: number = 0) {
-  if (str[offset] !== "{") return undefined;
+function TryLiteral(str: string, offset: number = 0) {
+  if (str[offset] !== '{') return undefined;
   offset++;
 
   const s = offset;
-  for (; offset<str.length; offset++) {
-    if (str[offset] === "}") break;
+  for (; offset < str.length; offset++) {
+    if (str[offset] === '}') break;
 
     const char = str.charCodeAt(offset);
-    if (char < "0".charCodeAt(0)) return undefined;
-    if (char > "9".charCodeAt(0)) return undefined;
+    if (char < '0'.charCodeAt(0)) return undefined;
+    if (char > '9'.charCodeAt(0)) return undefined;
   }
 
   const bytes = parseInt(str.slice(s, offset), 10);
 
-  if (str[offset] !== "}") return undefined;
+  if (str[offset] !== '}') return undefined;
   offset++;
 
-  if (str[offset] === "\r") offset++;
+  if (str[offset] === '\r') offset++;
 
-  if (str[offset] !== "\n") return undefined;
+  if (str[offset] !== '\n') return undefined;
   offset++;
 
   const e = offset + bytes;
@@ -173,13 +173,11 @@ function TryString(str: string, offset: number = 0) {
 
   i++; // move over closing quote
 
-
   return {
     val: str.slice(offset, i),
-    reached: i
-  }
+    reached: i,
+  };
 }
-
 
 const BREAK_ON = ['(', ')', '{', ' ', '\t', '\r', '\n'] as readonly string[];
 function TryKeyword(str: string, offset: number = 0) {
@@ -195,18 +193,16 @@ function TryKeyword(str: string, offset: number = 0) {
   return { val, reached: i };
 }
 
-
-
 /*============================
  * Helpers
 =============================*/
 
 export function ExtractFirstParameterValue(val: ParenthesizedValue) {
-  if (typeof val === "string") return val;
-  return ExtractFirstParameterValue(val[0] || "");
+  if (typeof val === 'string') return val;
+  return ExtractFirstParameterValue(val[0] || '');
 }
 
-export function GetParameterListStr (list: ParenthesizedValue, index: number): string | undefined {
+export function GetParameterListStr(list: ParenthesizedValue, index: number): string | undefined {
   if (!Array.isArray(list)) return undefined;
   return ParameterString(list[index]);
 }
@@ -214,30 +210,30 @@ export function GetParameterListStr (list: ParenthesizedValue, index: number): s
 export function ParameterString(val: ParenthesizedValue) {
   if (!val) return undefined;
   if (Array.isArray(val)) return undefined;
-  if (val === "NIL") return undefined;
+  if (val === 'NIL') return undefined;
   if (val.startsWith('"') && val.endsWith('"')) return val.slice(1, -1);
   return val;
 }
 
-
 export function ParseImapAddressList(value: ParenthesizedValue) {
   if (!Array.isArray(value)) return [];
-  return value.map(x => ParseImapAddress(x));
+  return value.map((x) => ParseImapAddress(x));
 }
 
-
 export function ParseImapAddress(value: ParenthesizedValue): ImapAddress {
-	if (!Array.isArray(value)) return {
-		name: undefined,
-		sourceRoute: undefined,
-		mailbox: undefined,
-		host: undefined
-	}
+  if (!Array.isArray(value)) {
+    return {
+      name: undefined,
+      sourceRoute: undefined,
+      mailbox: undefined,
+      host: undefined,
+    };
+  }
 
-	return {
-		name:        GetParameterListStr(value, 0),
-		sourceRoute: GetParameterListStr(value, 1),
-		mailbox:     GetParameterListStr(value, 2),
-		host:        GetParameterListStr(value, 3),
-	}
+  return {
+    name: GetParameterListStr(value, 0),
+    sourceRoute: GetParameterListStr(value, 1),
+    mailbox: GetParameterListStr(value, 2),
+    host: GetParameterListStr(value, 3),
+  };
 }

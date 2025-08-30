@@ -7,7 +7,6 @@ import type {
 	ImapMailbox,
 	ImapMessage,
 	ImapOptions,
-	ImapSearchCriteria,
 } from './types/mod.ts';
 import { CreateCancellablePromise } from './utils/promises.ts';
 import { ImapConnection } from './connection.ts';
@@ -386,7 +385,7 @@ export class ImapClient {
 		while (cursor < ids.length) {
 			const batchSize = Math.max(10, Math.min(take, ids.length - cursor, 50));
 
-			const batch = await this.fetch(ids.slice(cursor, cursor+batchSize).join(","), {
+			const batch = await this.#fetch(ids.slice(cursor, cursor+batchSize).join(","), {
 				envelope:      include.envelope,
 				uid:           include.uid,
 				bodyStructure: include.body,
@@ -485,45 +484,17 @@ export class ImapClient {
 		}
 	}
 
-
-	/**
-	 * Searches for messages
-	 * @deprecated
-	 * @param criteria Search criteria
-	 * @param charset Character set
-	 * @returns Promise that resolves with the message numbers
-	 */
-	async search(
-		criteria: ImapSearchCriteria,
-		charset?: string,
-	): Promise<number[]> {
-		if (!this.connected) {
-			throw new ImapNotConnectedError();
-		}
-
-		if (!this.#authenticated) {
-			await this.authenticate();
-		}
-
-		if (!this.#selectedMailbox) {
-			throw new ImapNoMailboxSelectedError();
-		}
-
-		const response = await this.#executeCommand(
-			commands.search(criteria, charset),
-		);
-
-		for (const line of response) {
-			if (line.startsWith('* SEARCH')) {
-				try {
-					return parsers.parseSearch(line);
-				} catch (error) {
-					console.warn('Failed to parse SEARCH response:', error);
-				}
+	async deleteMany(mailbox: string, args: {
+		where : Array<{ seq?: number, uid?: number }>,
+	}) {
+		await this.updateMany(mailbox, {
+			where: args.where,
+			data: {
+				flags: { add: ["Delete"] }
 			}
-		}
+		});
 
-		return [];
+		await this.#executeCommand(commands.expunge());
 	}
 
 	/**
@@ -533,7 +504,7 @@ export class ImapClient {
 	 * @param options Fetch options
 	 * @returns Promise that resolves with the messages
 	 */
-	async fetch(
+	async #fetch(
 		sequence: string,
 		options: ImapFetchOptions,
 	): Promise<ImapMessage[]> {
@@ -615,21 +586,9 @@ export class ImapClient {
 
 
 
-
-	/**
-	 * Expunges deleted messages
-	 * @returns Promise that resolves when the messages are expunged
-	 */
-	async expunge(): Promise<void> {
-		if (!this.connected) throw new ImapNotConnectedError();
-		if (!this.#authenticated) await this.authenticate();
-		if (!this.#selectedMailbox) throw new ImapNoMailboxSelectedError();
-
-		await this.#executeCommand(commands.expunge());
-	}
-
 	/**
 	 * Executes an IMAP command
+	 * @deprecated
 	 * @param command Command to execute
 	 * @returns Promise that resolves with the response lines
 	 */

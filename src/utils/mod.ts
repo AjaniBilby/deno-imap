@@ -32,7 +32,7 @@ export async function fetchAllMessages(
   const fetchOptions = { ...options, uid: true };
 
   // Fetch all messages
-  return await client.fetch(`1:${status.exists}`, fetchOptions);
+  return await client.#fetch(`1:${status.exists}`, fetchOptions);
 }
 
 /**
@@ -64,7 +64,7 @@ export async function searchAndFetchMessages(
   const fetchOptions = { ...options, uid: true };
 
   // Fetch the messages
-  return await client.fetch(messageNumbers.join(','), fetchOptions);
+  return await client.#fetch(messageNumbers.join(','), fetchOptions);
 }
 
 /**
@@ -94,7 +94,7 @@ export async function fetchUnreadMessages(
   const fetchOptions = { ...options, uid: true };
 
   // Fetch the messages
-  return await client.fetch(unseenIds.join(','), fetchOptions);
+  return await client.#fetch(unseenIds.join(','), fetchOptions);
 }
 
 /**

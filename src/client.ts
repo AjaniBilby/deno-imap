@@ -1,6 +1,7 @@
 import * as commands from './commands/mod.ts';
 import * as parsers from './parsers/mod.ts';
 import type {
+	Flag,
 	ImapAuthMechanism,
 	ImapFetchOptions,
 	ImapMailbox,
@@ -8,7 +9,7 @@ import type {
 	ImapOptions,
 	ImapSearchCriteria,
 } from './types/mod.ts';
-import { createCancellablePromise } from './utils/promises.ts';
+import { CreateCancellablePromise } from './utils/promises.ts';
 import { ImapConnection } from './connection.ts';
 import {
 	ImapAuthError,
@@ -44,7 +45,7 @@ export class ImapClient {
 	/** Active command cancellable promises */
 	#activeCommands: Map<
 		string,
-		ReturnType<typeof createCancellablePromise>
+		ReturnType<typeof CreateCancellablePromise>
 	> = new Map();
 	/** Reconnection attempt counter */
 	#reconnectAttempts = 0;
@@ -334,75 +335,7 @@ export class ImapClient {
 		};
 	}
 
-	async closeMailbox(): Promise<void> {
-		if (!this.connected) throw new ImapNotConnectedError();
-		if (!this.#authenticated) throw new ImapNotConnectedError('Not authenticated');
-		if (!this.#selectedMailbox) return;
 
-		await this.#executeCommand(commands.close());
-		this.#selectedMailbox = undefined;
-	}
-
-	async createMailbox(mailbox: string): Promise<void> {
-		if (!this.connected) throw new ImapNotConnectedError();
-		if (!this.#authenticated) await this.authenticate();
-
-		await this.#executeCommand(commands.create(mailbox));
-	}
-
-	async deleteMailbox(mailbox: string): Promise<void> {
-		if (!this.connected) throw new ImapNotConnectedError();
-
-		if (!this.#authenticated) await this.authenticate();
-
-		await this.#executeCommand(commands.deleteMailbox(mailbox));
-
-		// If the deleted mailbox is the currently selected one, clear it
-		if (this.#selectedMailbox && this.#selectedMailbox.name === mailbox) {
-			this.#selectedMailbox = undefined;
-		}
-	}
-
-	async renameMailbox(oldName: string, newName: string): Promise<void> {
-		if (!this.connected) throw new ImapNotConnectedError();
-		if (!this.#authenticated) await this.authenticate();
-
-		await this.#executeCommand(commands.rename(oldName, newName));
-
-		// If the renamed mailbox is the currently selected one, update its name
-		if (this.#selectedMailbox && this.#selectedMailbox.name === oldName) {
-			this.#selectedMailbox.name = newName;
-		}
-	}
-
-	async subscribeMailbox(mailbox: string): Promise<void> {
-		if (!this.connected) {
-			throw new ImapNotConnectedError();
-		}
-
-		if (!this.#authenticated) {
-			await this.authenticate();
-		}
-
-		await this.#executeCommand(commands.subscribe(mailbox));
-	}
-
-	/**
-	 * Unsubscribes from a mailbox
-	 * @param mailbox Mailbox name
-	 * @returns Promise that resolves when unsubscribed
-	 */
-	async unsubscribeMailbox(mailbox: string): Promise<void> {
-		if (!this.connected) {
-			throw new ImapNotConnectedError();
-		}
-
-		if (!this.#authenticated) {
-			await this.authenticate();
-		}
-
-		await this.#executeCommand(commands.unsubscribe(mailbox));
-	}
 
 	async findMany<T extends engine.FindManyImapMessageArgs>(mailbox: string, args: T): Promise<engine.FindManyResult<T>> {
 		await this.selectMailbox(mailbox);
@@ -415,6 +348,9 @@ export class ImapClient {
 			if (args.where.receivedDate) include.receivedDate = true;
 			if (args.where.flags)        include.flags        = true;
 			if (args.where.envelope)     include.envelope     = true;
+
+			// ensure the content type header is always present
+			if (include.body) include.headers = true;
 		}
 
 		const orderBy = engine.MakeOrderBy(args.orderBy);
@@ -477,7 +413,6 @@ export class ImapClient {
 			if (orderBy.sort) out.sort(orderBy.sort)
 		}
 
-
 		return out as engine.FindManyResult<T>;
 	}
 
@@ -493,6 +428,63 @@ export class ImapClient {
 
 		return first;
 	}
+
+
+	async updateMany(mailbox: string, args: {
+		where : Array<{ seq?: number, uid?: number }>,
+
+		data: {
+			flags: Partial<Record<'add' | 'remove' | 'set', Flag[]>>,
+			mailbox?: string
+		}
+	}) {
+		const seq = new Set<number>();
+		const uid = new Set<number>();
+
+		for (const mail of args.where) {
+			if (mail.uid) { // prefer uid if possible
+				uid.add(mail.uid);
+				continue;
+			}
+			if (mail.seq) {
+				seq.add(mail.seq);
+				continue;
+			}
+		}
+
+		const sequence = {
+			seq: seq.size > 0 ? [...seq.values()].join(",") : undefined,
+			uid: uid.size > 0 ? [...uid.values()].join(",") : undefined
+		};
+
+		await this.selectMailbox(mailbox);
+
+		if (args.data.flags.add) {
+			const flags = args.data.flags.add.map(x => "\\" + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase());
+			if (sequence.seq) await this.#executeCommand(commands.store(sequence.seq, flags, "add", false));
+			if (sequence.uid) await this.#executeCommand(commands.store(sequence.uid, flags, "add", true));
+		}
+
+		if (args.data.flags.set) {
+			const flags = args.data.flags.set.map(x => "\\" + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase());
+			if (sequence.seq) await this.#executeCommand(commands.store(sequence.seq, flags, "set", false));
+			if (sequence.uid) await this.#executeCommand(commands.store(sequence.uid, flags, "set", true));
+		}
+
+		if (args.data.flags.remove) {
+			const flags = args.data.flags.remove.map(x => "\\" + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase());
+			if (sequence.seq) await this.#executeCommand(commands.store(sequence.seq, flags, "remove", false));
+			if (sequence.uid) await this.#executeCommand(commands.store(sequence.uid, flags, "remove", true));
+		}
+
+		if (args.data.mailbox) {
+			if (!this.#capabilities.has('move')) throw new Error("Server does not support the move command");
+
+			if (sequence.seq) await this.#executeCommand(commands.move(sequence.seq, mailbox, false));
+			if (sequence.uid) await this.#executeCommand(commands.move(sequence.uid, mailbox, false));
+		}
+	}
+
 
 	/**
 	 * Searches for messages
@@ -621,88 +613,8 @@ export class ImapClient {
 		return messages;
 	}
 
-	/**
-	 * Sets flags on messages
-	 * @param sequence Message sequence set
-	 * @param flags Flags to set
-	 * @param action Action to perform
-	 * @param useUid Whether to use UIDs
-	 * @returns Promise that resolves when the flags are set
-	 */
-	async setFlags(
-		sequence: string,
-		flags: string[],
-		action: 'set' | 'add' | 'remove' = 'set',
-		useUid = false,
-	): Promise<void> {
-		if (!this.connected)        throw new ImapNotConnectedError();
-		if (!this.#authenticated)   await this.authenticate();
-		if (!this.#selectedMailbox) throw new ImapNoMailboxSelectedError();
 
-		await this.#executeCommand(commands.store(sequence, flags, action, useUid));
-	}
 
-	/**
-	 * Copies messages to another mailbox
-	 * @param sequence Message sequence set
-	 * @param mailbox Destination mailbox
-	 * @param useUid Whether to use UIDs
-	 * @returns Promise that resolves when the messages are copied
-	 */
-	async copyMessages(
-		sequence: string,
-		mailbox: string,
-		useUid = false,
-	): Promise<void> {
-		if (!this.connected) {
-			throw new ImapNotConnectedError();
-		}
-
-		if (!this.#authenticated) {
-			await this.authenticate();
-		}
-
-		if (!this.#selectedMailbox) {
-			throw new ImapNoMailboxSelectedError();
-		}
-
-		await this.#executeCommand(commands.copy(sequence, mailbox, useUid));
-	}
-
-	/**
-	 * Moves messages to another mailbox
-	 * @param sequence Message sequence set
-	 * @param mailbox Destination mailbox
-	 * @param useUid Whether to use UIDs
-	 * @returns Promise that resolves when the messages are moved
-	 */
-	async moveMessages(
-		sequence: string,
-		mailbox: string,
-		useUid = false,
-	): Promise<void> {
-		if (!this.connected) {
-			throw new ImapNotConnectedError();
-		}
-
-		if (!this.#authenticated) {
-			await this.authenticate();
-		}
-
-		if (!this.#selectedMailbox) {
-			throw new ImapNoMailboxSelectedError();
-		}
-
-		// Check if the server supports MOVE
-		if (this.#capabilities.has('MOVE')) {
-			await this.#executeCommand(commands.move(sequence, mailbox, useUid));
-		} else {
-			// Fall back to COPY + STORE + EXPUNGE
-			await this.copyMessages(sequence, mailbox, useUid);
-			await this.setFlags(sequence, ['\\Deleted'], 'add', useUid);
-			await this.#executeCommand(commands.expunge());
-		}
-	}
 
 	/**
 	 * Expunges deleted messages
@@ -717,98 +629,6 @@ export class ImapClient {
 	}
 
 	/**
-	 * Appends a message to a mailbox
-	 * @param mailbox Mailbox name
-	 * @param message Message content
-	 * @param flags Message flags
-	 * @param date Message date
-	 * @returns Promise that resolves when the message is appended
-	 */
-	async appendMessage(
-		mailbox: string,
-		message: string,
-		flags?: string[],
-		date?: Date,
-	): Promise<void> {
-		if (!this.connected) throw new ImapNotConnectedError();
-		if (!this.#authenticated) await this.authenticate();
-
-		const tag = this.#generateTag();
-		const timeoutMs = this.#options.commandTimeout || 30000;
-
-		const cancellable = createCancellablePromise<void>(
-			async () => {
-				try {
-					// Send the APPEND command
-					const command = commands.append(mailbox, message, flags, date);
-					await this.#connection.writeLine(`${tag} ${command}`);
-
-					// Wait for the continuation response
-					const response = await this.#connection.readLine();
-
-					if (!response.startsWith('+')) {
-						throw new ImapCommandError('APPEND', response);
-					}
-
-					// Send the message content
-					await this.#connection.writeLine(message);
-
-					// Wait for the command completion
-					while (true) {
-						const line = await this.#connection.readLine();
-
-						if (line.startsWith(tag)) {
-							// Command completed
-							if (!line.includes('OK')) {
-								throw new ImapCommandError('APPEND', line);
-							}
-							break;
-						}
-					}
-				} catch (error) {
-					// If the error is from the connection (e.g., socket timeout),
-					// clean up and rethrow
-					if (
-						error instanceof ImapTimeoutError ||
-						error instanceof ImapConnectionError
-					) {
-						// If the connection was lost, attempt to reconnect if enabled
-						if (
-							this.#options.autoReconnect &&
-							error instanceof ImapConnectionError
-						) {
-							try {
-								await this.#reconnect();
-
-								// If reconnection was successful, retry the append operation
-								// Note: The message may have been partially appended before the connection was lost
-								await this.appendMessage(mailbox, message, flags, date);
-								return;
-							} catch (_reconnectError) {
-								// If reconnection failed, throw the original error
-								throw error;
-							}
-						}
-					}
-
-					throw error;
-				}
-			},
-			timeoutMs,
-			`APPEND command timeout`,
-		);
-
-		// Store the cancellable promise for potential early cancellation
-		this.#activeCommands.set(tag, cancellable);
-
-		try {
-			await cancellable.promise;
-		} finally {
-			this.#activeCommands.delete(tag);
-		}
-	}
-
-	/**
 	 * Executes an IMAP command
 	 * @param command Command to execute
 	 * @returns Promise that resolves with the response lines
@@ -820,7 +640,7 @@ export class ImapClient {
 
 		// Create a cancellable timeout promise
 		const timeoutMs = this.#options.commandTimeout || 30000;
-		const cancellable = createCancellablePromise<string[]>(
+		const cancellable = CreateCancellablePromise<string[]>(
 			async () => {
 				try {
 					// Send the command
@@ -829,6 +649,7 @@ export class ImapClient {
 					// Wait for the response
 					const responseLines: string[] = [];
 
+					// eslint-disable-next-line no-constant-condition
 					while (true) {
 						const line = await this.#connection.readLine();
 						responseLines.push(line);

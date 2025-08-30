@@ -5,7 +5,7 @@ import {
   ImapNotConnectedError,
   ImapTimeoutError,
 } from './errors.ts';
-import { createCancellablePromise } from './utils/promises.ts';
+import { CreateCancellablePromise } from './utils/promises.ts';
 
 const DEFAULT_CONNECTION_TIMEOUT = 30000; // ms
 const DEFAULT_SOCKET_TIMEOUT = 60000; // ms
@@ -35,9 +35,9 @@ export class ImapConnection {
   /** Buffered data that hasn't been processed yet */
   private bufferedData = '';
   /** Connection timeout cancellable promise */
-  private connectionTimeoutCancellable?: ReturnType<typeof createCancellablePromise>;
+  private connectionTimeoutCancellable?: ReturnType<typeof CreateCancellablePromise>;
   /** Current socket activity cancellable promise */
-  private socketActivityCancellable?: ReturnType<typeof createCancellablePromise>;
+  private socketActivityCancellable?: ReturnType<typeof CreateCancellablePromise>;
 
   constructor(options: ImapConnectionOptions) {
     this.options = {
@@ -66,7 +66,7 @@ export class ImapConnection {
     try {
       // Create a cancellable promise for the connection
       const timeoutMs = this.options.connectionTimeout || DEFAULT_CONNECTION_TIMEOUT;
-      this.connectionTimeoutCancellable = createCancellablePromise<void>(
+      this.connectionTimeoutCancellable = CreateCancellablePromise<void>(
         () => this.establishConnection(),
         timeoutMs,
         `Connection timeout to ${this.options.host}:${this.options.port}`,
@@ -145,7 +145,7 @@ export class ImapConnection {
 
     // Create a new socket activity monitor
     const timeoutMs = this.options.socketTimeout || DEFAULT_SOCKET_TIMEOUT;
-    this.socketActivityCancellable = createCancellablePromise<void>(
+    this.socketActivityCancellable = CreateCancellablePromise<void>(
       // This promise never resolves on its own - it's just for the timeout
       () => new Promise<void>(() => {}),
       timeoutMs,
@@ -268,7 +268,7 @@ export class ImapConnection {
     try {
       // Create a cancellable promise for the read operation
       const timeoutMs = this.options.socketTimeout || DEFAULT_SOCKET_TIMEOUT;
-      const cancellable = createCancellablePromise<string>(
+      const cancellable = CreateCancellablePromise<string>(
         async () => {
           try {
             const bytesRead = await conn.read(this.buffer);

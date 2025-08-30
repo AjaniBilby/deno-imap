@@ -1,5 +1,3 @@
-import { MultipartPart } from '@mjackson/multipart-parser';
-
 export interface ImapOptions extends ImapConnectionOptions {
   /** Whether to automatically reconnect on connection loss */
   autoReconnect?: boolean;
@@ -160,7 +158,11 @@ export interface ImapBodyStructure {
   location?: string;
 }
 
-export type ImapAttachment = ImapBodyStructure & { data: MultipartPart };
+export type ImapAttachment = {
+  mimetype: string,
+  filename: string,
+  data: Uint8Array,
+};
 
 export interface ImapSearchCriteria {
   /** Search for messages with specific sequence numbers */

@@ -26,24 +26,6 @@ export {
   parseStatus,
 } from './src/parsers/mod.ts';
 
-// Export utility functions
-export {
-  createMailboxHierarchy,
-  decodeAttachment,
-  deleteMessages,
-  fetchAllMessages,
-  fetchMessagesFromSender,
-  fetchMessagesSince,
-  fetchMessagesWithAttachments,
-  fetchMessagesWithSubject,
-  fetchUnreadMessages,
-  getMailboxHierarchy,
-  markMessagesAsRead,
-  markMessagesAsUnread,
-  moveMessages,
-  searchAndFetchMessages,
-} from './src/utils/mod.ts';
-
 // Re-export types
 export type {
   ImapAuthMechanism,

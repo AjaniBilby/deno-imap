@@ -28,65 +28,65 @@ import { ImapTimeoutError } from '../errors.ts';
  * @param timeoutMessage Message for the timeout error
  * @returns An object with the promise and functions to cancel
  */
-export function createCancellablePromise<T>(
-  promiseFn: () => Promise<T>,
-  timeoutMs: number,
-  timeoutMessage: string,
+export function CreateCancellablePromise<T>(
+	promiseFn: () => Promise<T>,
+	timeoutMs: number,
+	timeoutMessage: string,
 ): {
-  promise: Promise<T>;
-  cancel: (reason?: string) => void;
+	promise: Promise<T>;
+	cancel: (reason?: string) => void;
 } {
-  let timeoutId: number | undefined;
-  let rejectFn: ((reason: Error) => void) | undefined;
-  let isSettled = false;
+	let timeoutId: number | undefined;
+	let rejectFn: ((reason: Error) => void) | undefined;
+	let isSettled = false;
 
-  const clearTimer = () => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
-    }
-  };
+	const clearTimer = () => {
+		if (timeoutId !== undefined) {
+			clearTimeout(timeoutId);
+			timeoutId = undefined;
+		}
+	};
 
-  const promise = new Promise<T>((resolve, reject) => {
-    rejectFn = reject;
+	const promise = new Promise<T>((resolve, reject) => {
+		rejectFn = reject;
 
-    // Execute the promise function first
-    const innerPromise = promiseFn();
+		// Execute the promise function first
+		const innerPromise = promiseFn();
 
-    // Set timeout after promise creation to avoid sync errors
-    timeoutId = setTimeout(() => {
-      if (!isSettled) {
-        reject(new ImapTimeoutError(timeoutMessage, timeoutMs));
-        isSettled = true;
-        clearTimer();
-      }
-    }, timeoutMs);
+		// Set timeout after promise creation to avoid sync errors
+		timeoutId = setTimeout(() => {
+			if (!isSettled) {
+				reject(new ImapTimeoutError(timeoutMessage, timeoutMs));
+				isSettled = true;
+				clearTimer();
+			}
+		}, timeoutMs);
 
-    // Handle settlement
-    innerPromise
-      .then((value) => {
-        if (!isSettled) {
-          resolve(value);
-          isSettled = true;
-        }
-      })
-      .catch((error) => {
-        if (!isSettled) {
-          reject(error);
-          isSettled = true;
-        }
-      })
-      .finally(clearTimer);
-  });
+		// Handle settlement
+		innerPromise
+			.then((value) => {
+				if (!isSettled) {
+					resolve(value);
+					isSettled = true;
+				}
+			})
+			.catch((error) => {
+				if (!isSettled) {
+					reject(error);
+					isSettled = true;
+				}
+			})
+			.finally(clearTimer);
+	});
 
-  return {
-    promise,
-    cancel: (reason?: string) => {
-      if (!isSettled && rejectFn) {
-        rejectFn(new Error(reason || 'Promise cancelled'));
-        isSettled = true;
-        clearTimer();
-      }
-    },
-  };
+	return {
+		promise,
+		cancel: (reason?: string) => {
+			if (!isSettled && rejectFn) {
+				rejectFn(new Error(reason || 'Promise cancelled'));
+				isSettled = true;
+				clearTimer();
+			}
+		},
+	};
 }

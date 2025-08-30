@@ -1,42 +1,42 @@
 {
-  "name": "@workingdevshero/deno-imap",
-  "version": "1.0.0",
-  "description": "A heroic IMAP client for Deno",
-  "tasks": {
-    "dev": "deno run --watch mod.ts",
+	"name": "@workingdevshero/deno-imap",
+	"version": "1.0.0",
+	"description": "A heroic IMAP client for Deno",
+	"tasks": {
+		"dev": "deno run --watch mod.ts",
 
-    "validate":       "deno task 'validate:*'",
-    "validate:check": "deno check --doc --quiet",
-    "validate:lint":  "deno lint",
-    "validate:test":  "deno test --allow-net"
-  },
-  "imports": {
-    "@mjackson/multipart-parser": "jsr:@mjackson/multipart-parser@^0.10.1",
-    "@std/assert": "jsr:@std/assert@1",
-    "@std/encoding": "jsr:@std/encoding@1"
-  },
-  "exports": {
-    ".": "./mod.ts",
-    "./types": "./src/types/mod.ts"
-  },
-  "compilerOptions": {
-    "strict": true,
-    "strictNullChecks": true
-  },
-  "fmt": {
-    "indentWidth": 2,
-    "singleQuote": true,
-    "lineWidth": 100
-  },
-  "lint": {
-    "include": ["src/**/*"],
-    "exclude": ["test/", "**/*.test.ts"],
-    "rules": {
-      "tags": ["recommended"],
-      "include": ["no-deprecated-deno-api"]
-    }
-  },
-  "test": {
-    "include": ["test/**", "src/**"]
-  }
+		"validate":       "deno task 'validate:*'",
+		"validate:check": "deno check --doc --quiet",
+		"validate:lint":  "deno lint",
+		"validate:test":  "deno test --allow-net"
+	},
+	"imports": {
+		"@mjackson/multipart-parser": "jsr:@mjackson/multipart-parser@^0.10.1",
+		"@std/assert": "jsr:@std/assert@1",
+		"@std/encoding": "jsr:@std/encoding@^1.0.10"
+	},
+	"exports": {
+		".": "./mod.ts",
+		"./types": "./src/types/mod.ts"
+	},
+	"compilerOptions": {
+		"strict": true,
+		"strictNullChecks": true
+	},
+	"fmt": {
+		"indentWidth": 2,
+		"singleQuote": true,
+		"lineWidth": 100
+	},
+	"lint": {
+		"include": ["src/**/*"],
+		"exclude": ["test/", "**/*.test.ts"],
+		"rules": {
+			"tags": ["recommended"],
+			"include": ["no-deprecated-deno-api"]
+		}
+	},
+	"test": {
+		"include": ["test/**", "src/**"]
+	}
 }

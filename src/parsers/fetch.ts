@@ -1,4 +1,5 @@
 import { getMultipartBoundary, parseMultipart } from '@mjackson/multipart-parser';
+import { decodeBase64 } from "jsr:@std/encoding/base64";
 
 import { ExtractFirstParameterValue, GetParameterListStr, ParameterString, ParenthesizedList, ParenthesizedValue, ParseImapAddressList, ParseParenthesized } from './parameters.ts';
 import { ImapAttachment, ImapBodyStructure, ImapEnvelope, ImapMessage } from '../types/mod.ts';
@@ -94,19 +95,32 @@ export function ParseFetch(str: string): ImapMessage {
 				ParseFetchHeaders(body.headers, h);
 
 				const contentType = headers!.get("Content-Type") || headers!.get("Content-Type");
-				if (!contentType) break;
+				if (!contentType) {
+					console.warn("Warn: attempting to decode imap body without content type");
+					break;
+				}
 
 				const boundary = getMultipartBoundary(contentType);
-				if (!boundary) break;
+				if (!boundary) {
+					console.warn("Warn: attempting to decode imap body without boundary");
+					break;
+				}
 
 				const buff = new TextEncoder().encode(ParameterString(b));
 				let i = 0;
-				for (const data of parseMultipart(buff, { boundary })) {
+				for (const part of parseMultipart(buff, { boundary })) {
+					if (!part.isFile) continue;
+
 					const shape = bodyStructure[i];
 					if (!shape) break;
 
+					const data = (shape.encoding === "base64" || part.headers.get("Content-Transfer-Encoding") === "base64")
+						? decodeBase64(part.text.replaceAll(/\s/g, ""))
+						: part.bytes;
+
 					body.attachments.push({
-						...shape,
+						mimetype: `${shape.type}/${shape.subtype}`,
+						filename: part.filename || "",
 						data
 					})
 					i++;
@@ -115,7 +129,7 @@ export function ParseFetch(str: string): ImapMessage {
 				break;
 			}
 			default: {
-				console.warn("Unparsed", key);
+				console.warn("Warn: Imap unparsed segment", key);
 			}
 		}
 	}
@@ -156,6 +170,7 @@ export function ParseFetchHeaders(into: Headers, str: string) {
 
 
 		let val = "";
+		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			let e = str.indexOf("\r\n", i);
 			if (e === -1) e = str.length;

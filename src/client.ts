@@ -338,8 +338,6 @@ export class ImapClient {
     mailbox: string,
     args: T,
   ): Promise<engine.FindManyResult<T>> {
-    await this.selectMailbox(mailbox);
-
     const out: ImapMessage[] = [];
     const include = args?.include || engine.INCLUDE_ALL;
 
@@ -362,7 +360,7 @@ export class ImapClient {
 
     const query = args.where ? engine.MakeWhereQuery(args.where) : '';
 
-    const response = await this.#executeCommand(`SEARCH ${query || 'ALL'}`);
+    const response = await this.#executeCommandIn(mailbox, `SEARCH ${query || 'ALL'}`);
     const result = response.find((x) => x.startsWith('* SEARCH'));
 
     if (!result) return out as engine.FindManyResult<T>;
@@ -385,7 +383,7 @@ export class ImapClient {
     while (cursor < ids.length) {
       const batchSize = Math.max(10, Math.min(take, ids.length - cursor, 50));
 
-      const batch = await this.#fetch(ids.slice(cursor, cursor + batchSize).join(','), {
+      const batch = await this.#fetch(mailbox, ids.slice(cursor, cursor + batchSize).join(','), {
         envelope: include.envelope,
         uid: include.uid,
         bodyStructure: include.body,
@@ -460,17 +458,15 @@ export class ImapClient {
       uid: uid.size > 0 ? [...uid.values()].join(',') : undefined,
     };
 
-    await this.selectMailbox(mailbox);
-
     if (args.data.flags.add) {
       const flags = args.data.flags.add.map((x) =>
         '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
       );
       if (sequence.seq) {
-        await this.#executeCommand(commands.store(sequence.seq, flags, 'add', false));
+        await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'add', false));
       }
       if (sequence.uid) {
-        await this.#executeCommand(commands.store(sequence.uid, flags, 'add', true));
+        await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'add', true));
       }
     }
 
@@ -479,10 +475,10 @@ export class ImapClient {
         '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
       );
       if (sequence.seq) {
-        await this.#executeCommand(commands.store(sequence.seq, flags, 'set', false));
+        await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'set', false));
       }
       if (sequence.uid) {
-        await this.#executeCommand(commands.store(sequence.uid, flags, 'set', true));
+        await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'set', true));
       }
     }
 
@@ -491,10 +487,10 @@ export class ImapClient {
         '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
       );
       if (sequence.seq) {
-        await this.#executeCommand(commands.store(sequence.seq, flags, 'remove', false));
+        await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'remove', false));
       }
       if (sequence.uid) {
-        await this.#executeCommand(commands.store(sequence.uid, flags, 'remove', true));
+        await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'remove', true));
       }
     }
 
@@ -503,8 +499,8 @@ export class ImapClient {
         throw new Error('Server does not support the move command');
       }
 
-      if (sequence.seq) await this.#executeCommand(commands.move(sequence.seq, mailbox, false));
-      if (sequence.uid) await this.#executeCommand(commands.move(sequence.uid, mailbox, false));
+      if (sequence.seq) await this.#executeCommandIn(mailbox, commands.move(sequence.seq, mailbox, false));
+      if (sequence.uid) await this.#executeCommandIn(mailbox, commands.move(sequence.uid, mailbox, false));
     }
   }
 
@@ -529,13 +525,11 @@ export class ImapClient {
    * @returns Promise that resolves with the messages
    */
   async #fetch(
+		mailbox: string,
     sequence: string,
     options: ImapFetchOptions,
   ): Promise<ImapMessage[]> {
-    if (!this.connected) throw new ImapNotConnectedError();
-    if (!this.#authenticated) await this.authenticate();
-    if (!this.#selectedMailbox) throw new ImapNoMailboxSelectedError();
-
+    await this.selectMailbox(mailbox);
     const response = await this.#executeCommand(
       commands.fetch(sequence, options),
     );
@@ -705,6 +699,11 @@ export class ImapClient {
       this.#activeCommands.delete(tag);
     }
   }
+
+	async #executeCommandIn(mailbox: string, command: string) {
+		await this.selectMailbox(mailbox);
+		return await this.#executeCommand(command);
+	}
 
   /**
    * Generates a unique command tag

@@ -1,10 +1,10 @@
 import { assertEquals } from '@std/assert';
 
-import { findAttachments, hasAttachments, parseBodyStructure } from '../../src/parsers/mod.ts';
+import { ParseBodyStructure } from '../../src/parsers/fetch.ts';
 
-Deno.test('parseBodyStructure - simple text/plain', () => {
+Deno.test('ParseBodyStructure - simple text/plain', () => {
   const input = '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42)';
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'TEXT');
   assertEquals(result.subtype, 'PLAIN');
@@ -14,11 +14,11 @@ Deno.test('parseBodyStructure - simple text/plain', () => {
   assertEquals(result.md5, '42');
 });
 
-Deno.test('parseBodyStructure - text/html', () => {
+Deno.test('ParseBodyStructure - text/html', () => {
   const input =
     '("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'TEXT');
   assertEquals(result.subtype, 'HTML');
@@ -27,11 +27,11 @@ Deno.test('parseBodyStructure - text/html', () => {
   assertEquals(result.size, 4321);
 });
 
-Deno.test('parseBodyStructure - application/pdf with disposition', () => {
+Deno.test('ParseBodyStructure - application/pdf with disposition', () => {
   const input =
     '("APPLICATION" "PDF" ("NAME" "document.pdf") NIL NIL "BASE64" 98765 NIL ("ATTACHMENT" ("FILENAME" "document.pdf")) NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'APPLICATION');
   assertEquals(result.subtype, 'PDF');
@@ -42,11 +42,11 @@ Deno.test('parseBodyStructure - application/pdf with disposition', () => {
   assertEquals(result.disposition?.parameters.FILENAME, 'document.pdf');
 });
 
-Deno.test('parseBodyStructure - image/jpeg with id', () => {
+Deno.test('ParseBodyStructure - image/jpeg with id', () => {
   const input =
     '("IMAGE" "JPEG" ("NAME" "photo.jpg") "<image001@example.com>" NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'IMAGE');
   assertEquals(result.subtype, 'JPEG');
@@ -58,11 +58,11 @@ Deno.test('parseBodyStructure - image/jpeg with id', () => {
   assertEquals(result.disposition?.parameters.FILENAME, 'photo.jpg');
 });
 
-Deno.test('parseBodyStructure - message/rfc822', () => {
+Deno.test('ParseBodyStructure - message/rfc822', () => {
   const input =
     '("MESSAGE" "RFC822" NIL NIL NIL "7BIT" 5678 ("Tue, 1 Apr 2023 12:34:56 +0000" "Test Subject" (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Recipient Name" NIL "recipient" "example.com")) NIL NIL NIL "<message-id@example.com>") ("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) 123 NIL NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
   assertEquals(result.type, 'MESSAGE');
   assertEquals(result.subtype, 'RFC822');
   assertEquals(result.encoding, '7BIT');
@@ -78,11 +78,11 @@ Deno.test('parseBodyStructure - message/rfc822', () => {
   assertEquals(nestedBody?.lines, 42);
 });
 
-Deno.test('parseBodyStructure - simple multipart/mixed', () => {
+Deno.test('ParseBodyStructure - simple multipart/mixed', () => {
   const input =
     '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'MULTIPART');
   assertEquals(result.subtype, 'MIXED');
@@ -110,11 +110,11 @@ Deno.test('parseBodyStructure - simple multipart/mixed', () => {
   assertEquals(imagePart?.disposition?.parameters?.FILENAME, 'photo.jpg');
 });
 
-Deno.test('parseBodyStructure - nested multipart', () => {
+Deno.test('ParseBodyStructure - nested multipart', () => {
   const input =
     '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) (("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "RELATED" ("BOUNDARY" "----related456") NIL NIL NIL) "ALTERNATIVE" ("BOUNDARY" "----alternative789") NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'MULTIPART');
   assertEquals(result.subtype, 'ALTERNATIVE');
@@ -159,11 +159,11 @@ Deno.test('parseBodyStructure - nested multipart', () => {
   assertEquals(imagePart?.disposition?.parameters.FILENAME, 'photo.jpg');
 });
 
-Deno.test('parseBodyStructure - with language and location', () => {
+Deno.test('ParseBodyStructure - with language and location', () => {
   const input =
     '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL ("EN-US" "FR-CA") "https://example.com/message")';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'TEXT');
   assertEquals(result.subtype, 'PLAIN');
@@ -175,10 +175,10 @@ Deno.test('parseBodyStructure - with language and location', () => {
   assertEquals(result.location, 'https://example.com/message');
 });
 
-Deno.test('parseBodyStructure - invalid input', () => {
+Deno.test('ParseBodyStructure - invalid input', () => {
   const input = '("TEXT")'; // Too few elements
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   // Should return default values
   assertEquals(result.type, 'TEXT');
@@ -188,11 +188,11 @@ Deno.test('parseBodyStructure - invalid input', () => {
   assertEquals(Object.keys(result.parameters).length, 0);
 });
 
-Deno.test('parseBodyStructure - with MD5', () => {
+Deno.test('ParseBodyStructure - with MD5', () => {
   const input =
     '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 "d41d8cd98f00b204e9800998ecf8427e" NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   assertEquals(result.type, 'TEXT');
   assertEquals(result.subtype, 'PLAIN');
@@ -203,75 +203,12 @@ Deno.test('parseBodyStructure - with MD5', () => {
   assertEquals(result.md5, 'd41d8cd98f00b204e9800998ecf8427e');
 });
 
-Deno.test('hasAttachments - simple text message without attachments', () => {
-  const input = '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), false);
-});
-
-Deno.test('hasAttachments - multipart/alternative without attachments', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) "ALTERNATIVE" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), false);
-});
-
-Deno.test('hasAttachments - message with explicit attachment', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("APPLICATION" "PDF" ("NAME" "document.pdf") NIL NIL "BASE64" 98765 NIL ("ATTACHMENT" ("FILENAME" "document.pdf")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), true);
-});
-
-Deno.test('hasAttachments - message with inline image', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), true);
-});
-
-Deno.test('hasAttachments - message with application type', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("APPLICATION" "OCTET-STREAM" NIL NIL NIL "BASE64" 98765 NIL NIL NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), true);
-});
-
-Deno.test('hasAttachments - message with deeply nested attachment', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) (("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "RELATED" ("BOUNDARY" "----related456") NIL NIL NIL) "ALTERNATIVE" ("BOUNDARY" "----alternative789") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), true);
-});
-
-Deno.test('hasAttachments - message with forwarded message', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("MESSAGE" "RFC822" NIL NIL NIL "7BIT" 5678 ("Tue, 1 Apr 2023 12:34:56 +0000" "Test Subject" (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Recipient Name" NIL "recipient" "example.com")) NIL NIL NIL "<message-id@example.com>") ("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) 123 NIL NIL NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), true);
-});
-
-Deno.test('hasAttachments - message with named part but no disposition', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("TEXT" "CSV" ("NAME" "data.csv") NIL NIL "7BIT" 2345 53 NIL NIL NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-  const bodyStructure = parseBodyStructure(input);
-
-  assertEquals(hasAttachments(bodyStructure), true);
-});
-
-Deno.test('parseBodyStructure - complex multipart structure with multiple levels', () => {
+Deno.test('ParseBodyStructure - complex multipart structure with multiple levels', () => {
   // This is a complex structure similar to what we saw in the real-world example
   const input =
     '((("text" "plain" ("charset" "utf-8") NIL NIL "base64" 14 1 NIL NIL NIL NIL)("text" "html" ("charset" "utf-8") NIL NIL "base64" 636 10 NIL NIL NIL NIL) "alternative" ("boundary" "b2=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)("image" "png" ("name" "deno.png") NIL NIL "base64" 760752 NIL ("attachment" ("filename" "deno.png")) NIL NIL) "mixed" ("boundary" "b1=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   // Check the top-level structure
   assertEquals(result.type, 'MULTIPART');
@@ -318,17 +255,14 @@ Deno.test('parseBodyStructure - complex multipart structure with multiple levels
   assertEquals(imagePart?.size, 760752);
   assertEquals(imagePart?.disposition.type, 'ATTACHMENT');
   assertEquals(imagePart?.disposition.parameters?.FILENAME, 'deno.png');
-
-  // Verify that hasAttachments correctly identifies this structure as having attachments
-  assertEquals(hasAttachments(result), true);
 });
 
-Deno.test('parseBodyStructure - multipart structure with unusual format', () => {
+Deno.test('ParseBodyStructure - multipart structure with unusual format', () => {
   // This tests the enhanced isMultipartStructure function with a structure that doesn't follow the typical pattern
   const input =
     '("text" "plain" ("charset" "utf-8") NIL NIL "7BIT" 100 10 NIL NIL NIL NIL) ("image" "jpeg" ("name" "test.jpg") NIL NIL "BASE64" 5000 NIL ("ATTACHMENT" ("FILENAME" "test.jpg")) NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   // Check that it was correctly identified as a multipart structure
   assertEquals(result.type, 'MULTIPART');
@@ -348,18 +282,15 @@ Deno.test('parseBodyStructure - multipart structure with unusual format', () => 
   assertEquals(imagePart?.type, 'IMAGE');
   assertEquals(imagePart?.subtype, 'JPEG');
   assertEquals(imagePart?.disposition.type, 'ATTACHMENT');
-
-  // Verify that hasAttachments correctly identifies this structure as having attachments
-  assertEquals(hasAttachments(result), true);
 });
 
-Deno.test('parseBodyStructure - multipart structure with only subtype indicator', () => {
+Deno.test('ParseBodyStructure - multipart structure with only subtype indicator', () => {
   // This tests the enhanced isMultipartStructure function with a structure that only has a subtype indicator
   // We need to provide a more complete structure for the parser to handle
   const input =
     '(("TEXT" "PLAIN" NIL NIL NIL "7BIT" 0 0 NIL NIL NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-  const result = parseBodyStructure(input);
+  const result = ParseBodyStructure(input);
 
   // Check that it was correctly identified as a multipart structure
   assertEquals(result.type, 'MULTIPART');
@@ -368,62 +299,4 @@ Deno.test('parseBodyStructure - multipart structure with only subtype indicator'
 
   // This structure has one child part
   assertEquals(result.childParts?.length, 1);
-});
-
-Deno.test('findAttachments - complex structure with multiple attachments', () => {
-  // This tests the findAttachments function with a complex structure containing multiple attachments
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("APPLICATION" "PDF" ("NAME" "document1.pdf") NIL NIL "BASE64" 98765 NIL ("ATTACHMENT" ("FILENAME" "document1.pdf")) NIL NIL) ("APPLICATION" "ZIP" ("NAME" "archive.zip") NIL NIL "BASE64" 123456 NIL ("ATTACHMENT" ("FILENAME" "archive.zip")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
-
-  const bodyStructure = parseBodyStructure(input);
-  const attachments = findAttachments(bodyStructure);
-
-  // Check that we found the correct number of attachments
-  assertEquals(attachments.length, 2);
-
-  // Check the first attachment
-  assertEquals(attachments[0].filename, 'document1.pdf');
-  assertEquals(attachments[0].type, 'APPLICATION');
-  assertEquals(attachments[0].subtype, 'PDF');
-  assertEquals(attachments[0].size, 98765);
-  assertEquals(attachments[0].encoding, 'BASE64');
-  assertEquals(attachments[0].section, '2');
-
-  // Check the second attachment
-  assertEquals(attachments[1].filename, 'archive.zip');
-  assertEquals(attachments[1].type, 'APPLICATION');
-  assertEquals(attachments[1].subtype, 'ZIP');
-  assertEquals(attachments[1].size, 123456);
-  assertEquals(attachments[1].encoding, 'BASE64');
-  assertEquals(attachments[1].section, '3');
-});
-
-Deno.test('findAttachments - nested structure with attachments at different levels', () => {
-  // This tests the findAttachments function with attachments at different nesting levels
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) (("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) ("APPLICATION" "PDF" ("NAME" "nested.pdf") NIL NIL "BASE64" 87654 NIL ("ATTACHMENT" ("FILENAME" "nested.pdf")) NIL NIL) "RELATED" ("BOUNDARY" "----related456") NIL NIL NIL) ("APPLICATION" "ZIP" ("NAME" "toplevel.zip") NIL NIL "BASE64" 123456 NIL ("ATTACHMENT" ("FILENAME" "toplevel.zip")) NIL NIL) "MIXED" ("BOUNDARY" "----mixed789") NIL NIL NIL)';
-
-  const bodyStructure = parseBodyStructure(input);
-  const attachments = findAttachments(bodyStructure);
-
-  // Check that we found the correct number of attachments
-  assertEquals(attachments.length, 3);
-
-  // Check the attachments and their section paths
-  const filenames = attachments.map((a) => a.filename);
-  const sections = attachments.map((a) => a.section);
-
-  // The attachments should be: photo.jpg, nested.pdf, and toplevel.zip
-  assertEquals(filenames.includes('photo.jpg'), true);
-  assertEquals(filenames.includes('nested.pdf'), true);
-  assertEquals(filenames.includes('toplevel.zip'), true);
-
-  // Check that the section paths are correct
-  const photoAttachment = attachments.find((a) => a.filename === 'photo.jpg');
-  const nestedPdfAttachment = attachments.find((a) => a.filename === 'nested.pdf');
-  const topLevelZipAttachment = attachments.find((a) => a.filename === 'toplevel.zip');
-
-  assertEquals(photoAttachment?.section, '2.2');
-  assertEquals(nestedPdfAttachment?.section, '2.3');
-  assertEquals(topLevelZipAttachment?.section, '3');
 });

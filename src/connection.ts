@@ -1,10 +1,4 @@
 import type { ImapConnectionOptions } from './types/mod.ts';
-import {
-  ImapConnectionError,
-  ImapError,
-  ImapNotConnectedError,
-  ImapTimeoutError,
-} from './errors.ts';
 import { CreateCancellablePromise } from './utils/promises.ts';
 
 const DEFAULT_CONNECTION_TIMEOUT = 30000; // ms
@@ -68,8 +62,10 @@ export class ImapConnection {
       const timeoutMs = this.options.connectionTimeout || DEFAULT_CONNECTION_TIMEOUT;
       this.connectionTimeoutCancellable = CreateCancellablePromise<void>(
         () => this.establishConnection(),
-        timeoutMs,
-        `Connection timeout to ${this.options.host}:${this.options.port}`,
+        {
+          message: `Connection timeout to ${this.options.host}:${this.options.port}`,
+          ms: timeoutMs,
+        },
       );
 
       // Wait for the connection to be established or timeout
@@ -87,14 +83,10 @@ export class ImapConnection {
       // Clean up if connection fails
       await this.disconnect();
 
-      if (error instanceof ImapError) {
-        throw error;
-      } else {
-        throw new ImapConnectionError(
-          `Failed to connect to ${this.options.host}:${this.options.port}`,
-          error instanceof Error ? error : new Error(String(error)),
-        );
-      }
+      throw new Error(
+        `Failed to connect to ${this.options.host}:${this.options.port}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -116,7 +108,7 @@ export class ImapConnection {
         });
       }
     } catch (error) {
-      throw new ImapConnectionError(
+      throw new Error(
         `Failed to connect to ${this.options.host}:${this.options.port}`,
         error instanceof Error ? error : new Error(String(error)),
       );
@@ -144,20 +136,19 @@ export class ImapConnection {
     }
 
     // Create a new socket activity monitor
-    const timeoutMs = this.options.socketTimeout || DEFAULT_SOCKET_TIMEOUT;
     this.socketActivityCancellable = CreateCancellablePromise<void>(
       // This promise never resolves on its own - it's just for the timeout
       () => new Promise<void>(() => {}),
-      timeoutMs,
-      'Socket inactivity timeout',
+      {
+        message: 'Socket inactivity timeout',
+        ms: this.options.socketTimeout || DEFAULT_SOCKET_TIMEOUT,
+      },
     );
 
     // When the socket times out, disconnect
-    this.socketActivityCancellable.promise.catch(async (error) => {
-      if (error instanceof ImapTimeoutError) {
-        console.warn('Warn: Socket inactivity timeout, disconnecting');
-        await this.disconnect();
-      }
+    this.socketActivityCancellable.promise.catch(async () => {
+      console.warn('Warn: Socket inactivity timeout, disconnecting');
+      await this.disconnect();
     });
   }
 
@@ -212,9 +203,7 @@ export class ImapConnection {
    * @throws {ImapTimeoutError} If socket has timed out
    */
   async write(data: string): Promise<void> {
-    if (!this._connected) {
-      throw new ImapNotConnectedError();
-    }
+    if (!this._connected) throw new Error('ImapConnectionError');
 
     // Reset socket activity monitor
     await this.resetSocketActivity();
@@ -222,15 +211,13 @@ export class ImapConnection {
     const bytes = this.encoder.encode(data);
     const conn = this.tlsConn || this.conn;
 
-    if (!conn) {
-      throw new ImapNotConnectedError();
-    }
+    if (!conn) throw new Error('ImapConnectionError');
 
     try {
       await conn.write(bytes);
     } catch (error) {
       await this.disconnect();
-      throw new ImapConnectionError(
+      throw new Error(
         'Failed to write to socket',
         error instanceof Error ? error : new Error(String(error)),
       );
@@ -252,22 +239,17 @@ export class ImapConnection {
    * @throws {ImapTimeoutError} If socket has timed out
    */
   async read(): Promise<string> {
-    if (!this._connected) {
-      throw new ImapNotConnectedError();
-    }
+    if (!this._connected) throw new Error('ImapConnectionError');
 
     // Reset socket activity monitor
     await this.resetSocketActivity();
 
     const conn = this.tlsConn || this.conn;
 
-    if (!conn) {
-      throw new ImapNotConnectedError();
-    }
+    if (!conn) throw new Error('ImapConnectionError');
 
     try {
       // Create a cancellable promise for the read operation
-      const timeoutMs = this.options.socketTimeout || DEFAULT_SOCKET_TIMEOUT;
       const cancellable = CreateCancellablePromise<string>(
         async () => {
           try {
@@ -276,42 +258,36 @@ export class ImapConnection {
             if (bytesRead === null) {
               // Connection closed
               await this.disconnect();
-              throw new ImapConnectionError('Connection closed by server');
+              throw new Error('Connection closed by server');
             }
 
             const data = this.decoder.decode(this.buffer.subarray(0, bytesRead));
             return data;
           } catch (error) {
-            // Handle connection errors
-            if (!(error instanceof ImapTimeoutError)) {
-              await this.disconnect();
-            }
+            await this.disconnect();
             throw error instanceof Error
               ? error
-              : new ImapConnectionError('Failed to read from socket', new Error(String(error)));
+              : new Error('Failed to read from socket', new Error(String(error)));
           }
         },
-        timeoutMs,
-        'Socket read timeout',
+        {
+          message: 'Socket read timeout',
+          ms: this.options.socketTimeout || DEFAULT_SOCKET_TIMEOUT,
+        },
       );
 
       // Wait for the read operation to complete or timeout
       return await cancellable.promise;
     } catch (error) {
-      // If it's a timeout error, disconnect and rethrow
-      if (error instanceof ImapTimeoutError) {
-        await this.disconnect();
-      }
+      await this.disconnect();
 
       // Rethrow the error
-      if (error instanceof Error) {
-        throw error;
-      } else {
-        throw new ImapConnectionError(
-          'Failed to read from socket',
-          new Error(String(error)),
-        );
-      }
+      if (error instanceof Error) throw error;
+
+      throw new Error(
+        'Failed to read from socket',
+        new Error(String(error)),
+      );
     }
   }
 
@@ -320,9 +296,7 @@ export class ImapConnection {
    * @returns Promise that resolves with the line
    */
   async readLine(): Promise<string> {
-    if (!this._connected) {
-      throw new ImapNotConnectedError();
-    }
+    if (!this._connected) throw new Error('ImapConnectionError');
 
     // Keep adding to the buffer until a new line in present
     let crlfIndex = this.bufferedData.indexOf(CRLF);

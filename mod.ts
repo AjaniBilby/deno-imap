@@ -7,16 +7,11 @@
  *
  * @module
  */
-
-export { ImapAuthError, ImapCommandError, ImapError } from './src/errors.ts';
 export { ImapConnection } from './src/connection.ts';
 export { ImapClient } from './src/client.ts';
 
 // Export parsers
 export {
-  findAttachments,
-  hasAttachments,
-  parseBodyStructure,
   parseCapabilities,
   parseEnvelope,
   parseFetch,

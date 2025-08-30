@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@mjackson/multipart-parser@~0.10.1": "0.10.1",
     "jsr:@std/assert@1": "1.0.14",
+    "jsr:@std/encoding@*": "1.0.10",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/internal@^1.0.10": "1.0.10",
     "npm:@mjackson/headers@~0.11.1": "0.11.1"

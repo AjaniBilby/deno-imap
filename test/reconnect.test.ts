@@ -1,6 +1,5 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { ImapConnectionError, ImapTimeoutError } from '../src/errors.ts';
 import { ImapConnection } from '../src/connection.ts';
 import { ImapClient } from '../src/client.ts';
 
@@ -72,14 +71,12 @@ function createMockClient(options: {
       this.readLineCount++;
 
       // Simulate a timeout if configured
-      if (options.shouldTimeout) {
-        throw new ImapTimeoutError('socket', 100);
-      }
+      if (options.shouldTimeout) throw new Error('socket 100');
 
       // Simulate a disconnection if configured
       if (options.shouldDisconnect && this.readLineCount > 2) {
         this._connected = false;
-        throw new ImapConnectionError('Connection closed by server');
+        throw new Error('Connection closed by server');
       }
 
       // Return appropriate mock response based on the command
@@ -104,14 +101,12 @@ function createMockClient(options: {
       this.writeLineCount++;
 
       // Simulate a timeout if configured
-      if (options.shouldTimeout) {
-        throw new ImapTimeoutError('socket', 100);
-      }
+      if (options.shouldTimeout) throw new Error('socket 100');
 
       // Simulate a disconnection if configured
       if (options.shouldDisconnect && this.writeLineCount > 2) {
         this._connected = false;
-        throw new ImapConnectionError('Connection closed by server');
+        throw new Error('Connection closed by server');
       }
     },
 
@@ -141,9 +136,7 @@ function createMockClient(options: {
   (client as any).reconnect = async function () {
     (this as any).reconnectCalled = true;
 
-    if (!options.shouldReconnect) {
-      throw new ImapConnectionError('Reconnection disabled');
-    }
+    if (!options.shouldReconnect) throw new Error('Reconnection disabled');
 
     // Simplified reconnect for testing
     (this as any).connection._connected = true;
@@ -197,13 +190,13 @@ Deno.test('ImapClient - Connection error handling', async () => {
 
   // Override listMailboxes to simulate connection error
   client.listMailboxes = async function () {
-    throw new ImapConnectionError('Connection closed by server');
+    throw new Error('Connection closed by server');
   };
 
   // Operation should fail with connection error
   await assertRejects(
     () => client.listMailboxes(),
-    ImapConnectionError,
+    Error,
   );
 });
 
@@ -247,7 +240,6 @@ Deno.test('ImapClient - Manual reconnection', async () => {
 
   // Track if reconnect was called
   let reconnectCalled = false;
-  const originalReconnect = (client as any).reconnect;
   (client as any).reconnect = async function () {
     reconnectCalled = true;
     return Promise.resolve();
@@ -271,13 +263,13 @@ Deno.test('ImapClient - Reconnection failure', async () => {
 
   // Override reconnect to simulate failure
   (client as any).reconnect = async function () {
-    throw new ImapConnectionError('Reconnection disabled');
+    throw new Error('Reconnection disabled');
   };
 
   // This should fail to reconnect
   await assertRejects(
     () => client.forceReconnect(),
-    ImapConnectionError,
+    Error,
   );
 });
 
@@ -297,7 +289,7 @@ Deno.test('ImapClient - Connection timeout in ImapConnection', async () => {
 
   // Create a socket activity cancellable that will immediately timeout
   const mockCancellable = {
-    promise: Promise.reject(new ImapTimeoutError('Socket inactivity timeout', 100)),
+    promise: Promise.reject(new Error('Socket inactivity timeout 100')),
     cancel: () => {},
   };
 
@@ -372,36 +364,4 @@ Deno.test('ImapClient - Retry command after successful reconnection', () => {
 
   // Check that reconnect was called
   assertEquals(reconnectCalled, true);
-});
-
-Deno.test('ImapClient - Append message with reconnection', () => {
-  const client = createMockClient();
-
-  // Track calls
-  let reconnectCalled = false;
-  let appendRetried = false;
-
-  // Override reconnect
-  (client as any).reconnect = () => {
-    reconnectCalled = true;
-    return Promise.resolve();
-  };
-
-  // Override appendMessage
-  const originalAppendMessage = client.appendMessage;
-  client.appendMessage = function () {
-    if (!reconnectCalled) {
-      // First call should trigger reconnection
-      (this as any).reconnect();
-      appendRetried = true;
-    }
-    return Promise.resolve();
-  };
-
-  // Call appendMessage
-  client.appendMessage('INBOX', 'Test');
-
-  // Verify reconnect was called and appendMessage was retried
-  assertEquals(reconnectCalled, true);
-  assertEquals(appendRetried, true);
 });

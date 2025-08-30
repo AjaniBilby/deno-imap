@@ -1,6 +1,5 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { ImapTimeoutError } from '../src/errors.ts';
 import { ImapConnection } from '../src/connection.ts';
 
 Deno.test('ImapConnection - Socket timeout handling', async () => {
@@ -19,9 +18,7 @@ Deno.test('ImapConnection - Socket timeout handling', async () => {
 
   // Create a socket activity cancellable that will immediately timeout
   const mockCancellable = {
-    promise: Promise.reject(
-      new ImapTimeoutError('Socket inactivity timeout', 100),
-    ),
+    promise: Promise.reject(new Error('Socket inactivity timeout 100')),
     cancel: () => {},
   };
 

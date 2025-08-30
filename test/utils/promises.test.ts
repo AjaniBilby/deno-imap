@@ -1,14 +1,15 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
 import { CreateCancellablePromise } from '../../src/utils/promises.ts';
-import { ImapTimeoutError } from '../../src/errors.ts';
 
 Deno.test('CreateCancellablePromise - resolves with the result', async () => {
   const expected = 'test result';
   const cancellable = CreateCancellablePromise(
     async () => expected,
-    1000,
-    'Test timeout',
+    {
+      message: 'Test timeout',
+      ms: 1000,
+    },
   );
 
   const result = await cancellable.promise;
@@ -21,8 +22,10 @@ Deno.test('CreateCancellablePromise - rejects with the error from the promise', 
     async () => {
       throw expectedError;
     },
-    1000,
-    'Test timeout',
+    {
+      message: 'Test timeout',
+      ms: 1000,
+    },
   );
 
   await assertRejects(
@@ -33,7 +36,6 @@ Deno.test('CreateCancellablePromise - rejects with the error from the promise', 
 });
 
 Deno.test('CreateCancellablePromise - times out if promise takes too long', async () => {
-  const timeoutMs = 100;
   let resolver: (() => void) | undefined;
 
   const cancellable = CreateCancellablePromise<string>(
@@ -44,14 +46,16 @@ Deno.test('CreateCancellablePromise - times out if promise takes too long', asyn
       });
       return 'should not resolve';
     },
-    timeoutMs,
-    'Test timeout',
+    {
+      message: 'Test timeout',
+      ms: 100,
+    },
   );
 
   try {
     await assertRejects(
       () => cancellable.promise,
-      ImapTimeoutError,
+      Error,
     );
   } finally {
     // Resolve the inner promise to avoid leaking it
@@ -70,8 +74,10 @@ Deno.test('CreateCancellablePromise - can be cancelled', async () => {
       });
       return 'should not resolve';
     },
-    2000,
-    'Test timeout',
+    {
+      message: 'Test timeout',
+      ms: 2000,
+    },
   );
 
   // Cancel the promise

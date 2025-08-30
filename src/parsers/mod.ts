@@ -1,9 +1,7 @@
 import type { ImapEnvelope, ImapMailbox } from '../types/mod.ts';
-import { ImapParseError } from '../errors.ts';
 import { ParseFetch } from './fetch.ts';
 
 // Export bodystructure parser functions directly
-export { findAttachments, hasAttachments, parseBodyStructure } from './bodystructure.ts';
 import { ParseParenthesized } from './parameters.ts';
 import { ParseEnvelope } from './fetch.ts';
 
@@ -15,10 +13,7 @@ import { ParseEnvelope } from './fetch.ts';
 export function parseCapabilities(line: string): string[] {
   // Format: * CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN ...
   const match = line.match(/^\* CAPABILITY (.+)$/i);
-
-  if (!match) {
-    throw new ImapParseError('Invalid capability response', line);
-  }
+  if (!match) throw new Error(`Invalid capability response "${JSON.stringify(line)}"`);
 
   return match[1].split(' ');
 }
@@ -31,10 +26,7 @@ export function parseCapabilities(line: string): string[] {
 export function parseListResponse(line: string): ImapMailbox {
   // Format: * LIST (\HasNoChildren) "/" "INBOX"
   const match = line.match(/^\* LIST \((.*?)\) "(.+?)" (.+)$/i);
-
-  if (!match) {
-    throw new ImapParseError('Invalid list response', line);
-  }
+  if (!match) throw new Error(`Invalid list response "${JSON.stringify(line)}"`);
 
   const flags = match[1]
     .split(' ')
@@ -67,10 +59,7 @@ export function parseListResponse(line: string): ImapMailbox {
 export function parseStatus(line: string): Partial<ImapMailbox> {
   // Format: * STATUS "INBOX" (MESSAGES 231 UNSEEN 5 UIDNEXT 44292 UIDVALIDITY 1)
   const match = line.match(/^\* STATUS "?([^"]+)"? \((.*)\)$/i);
-
-  if (!match) {
-    throw new ImapParseError('Invalid status response', line);
-  }
+  if (!match) throw new Error(`Invalid status response "${JSON.stringify(line)}"`);
 
   const name = match[1];
   const statusItems = match[2].split(' ');
@@ -168,10 +157,7 @@ export function parseSelect(lines: string[]): Partial<ImapMailbox> {
 export function parseSearch(line: string): number[] {
   // Format: * SEARCH 1 2 3 4 5
   const match = line.match(/^\* SEARCH(.*)$/i);
-
-  if (!match) {
-    throw new ImapParseError('Invalid search response', line);
-  }
+  if (!match) throw new Error(`Invalid search response "${JSON.stringify(line)}"`);
 
   return match[1]
     .trim()

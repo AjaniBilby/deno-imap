@@ -1,5 +1,3 @@
-import { ImapTimeoutError } from '../errors.ts';
-
 /**
  * Creates a cancellable promise with a timeout
  *
@@ -30,8 +28,10 @@ import { ImapTimeoutError } from '../errors.ts';
  */
 export function CreateCancellablePromise<T>(
   promiseFn: () => Promise<T>,
-  timeoutMs: number,
-  timeoutMessage: string,
+  timeout: {
+    message: string;
+    ms: number;
+  },
 ): {
   promise: Promise<T>;
   cancel: (reason?: string) => void;
@@ -40,11 +40,10 @@ export function CreateCancellablePromise<T>(
   let rejectFn: ((reason: Error) => void) | undefined;
   let isSettled = false;
 
-  const clearTimer = () => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
-    }
+  const clear = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = undefined;
+    isSettled = true;
   };
 
   const promise = new Promise<T>((resolve, reject) => {
@@ -55,38 +54,37 @@ export function CreateCancellablePromise<T>(
 
     // Set timeout after promise creation to avoid sync errors
     timeoutId = setTimeout(() => {
-      if (!isSettled) {
-        reject(new ImapTimeoutError(timeoutMessage, timeoutMs));
-        isSettled = true;
-        clearTimer();
-      }
-    }, timeoutMs);
+      if (isSettled) return;
+
+      reject(new Error(timeout.message));
+      clear();
+    }, timeout.ms);
 
     // Handle settlement
     innerPromise
       .then((value) => {
-        if (!isSettled) {
-          resolve(value);
-          isSettled = true;
-        }
+        if (isSettled) return;
+
+        resolve(value);
+        clear();
       })
       .catch((error) => {
-        if (!isSettled) {
-          reject(error);
-          isSettled = true;
-        }
+        if (isSettled) return;
+
+        reject(error);
+        clear();
       })
-      .finally(clearTimer);
+      .finally(clear);
   });
 
   return {
     promise,
     cancel: (reason?: string) => {
-      if (!isSettled && rejectFn) {
-        rejectFn(new Error(reason || 'Promise cancelled'));
-        isSettled = true;
-        clearTimer();
-      }
+      if (isSettled) return;
+      if (!rejectFn) return;
+
+      rejectFn(new Error(reason || 'Promise cancelled'));
+      clear();
     },
   };
 }

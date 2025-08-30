@@ -26,7 +26,7 @@
  * ```
  */
 export function ParseHeaders(str: string, into?: Headers) {
-	into ||= new Headers();
+  into ||= new Headers();
 
   let i = 0;
   while (i < str.length) {
@@ -56,5 +56,5 @@ export function ParseHeaders(str: string, into?: Headers) {
     into.set(key, val);
   }
 
-	return into
+  return into;
 }

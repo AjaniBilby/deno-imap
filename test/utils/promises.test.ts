@@ -1,11 +1,11 @@
 import { assertEquals, assertRejects } from '@std/assert';
 
-import { createCancellablePromise } from '../../src/utils/promises.ts';
+import { CreateCancellablePromise } from '../../src/utils/promises.ts';
 import { ImapTimeoutError } from '../../src/errors.ts';
 
-Deno.test('createCancellablePromise - resolves with the result', async () => {
+Deno.test('CreateCancellablePromise - resolves with the result', async () => {
   const expected = 'test result';
-  const cancellable = createCancellablePromise(
+  const cancellable = CreateCancellablePromise(
     async () => expected,
     1000,
     'Test timeout',
@@ -15,9 +15,9 @@ Deno.test('createCancellablePromise - resolves with the result', async () => {
   assertEquals(result, expected);
 });
 
-Deno.test('createCancellablePromise - rejects with the error from the promise', async () => {
+Deno.test('CreateCancellablePromise - rejects with the error from the promise', async () => {
   const expectedError = new Error('test error');
-  const cancellable = createCancellablePromise<string>(
+  const cancellable = CreateCancellablePromise<string>(
     async () => {
       throw expectedError;
     },
@@ -32,11 +32,11 @@ Deno.test('createCancellablePromise - rejects with the error from the promise', 
   );
 });
 
-Deno.test('createCancellablePromise - times out if promise takes too long', async () => {
+Deno.test('CreateCancellablePromise - times out if promise takes too long', async () => {
   const timeoutMs = 100;
   let resolver: (() => void) | undefined;
 
-  const cancellable = createCancellablePromise<string>(
+  const cancellable = CreateCancellablePromise<string>(
     async () => {
       // Create a promise that we can resolve manually
       await new Promise<void>((resolve) => {
@@ -59,10 +59,10 @@ Deno.test('createCancellablePromise - times out if promise takes too long', asyn
   }
 });
 
-Deno.test('createCancellablePromise - can be cancelled', async () => {
+Deno.test('CreateCancellablePromise - can be cancelled', async () => {
   let resolver: (() => void) | undefined;
 
-  const cancellable = createCancellablePromise<string>(
+  const cancellable = CreateCancellablePromise<string>(
     async () => {
       // Create a promise that we can resolve manually
       await new Promise<void>((resolve) => {

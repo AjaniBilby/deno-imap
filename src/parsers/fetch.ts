@@ -13,6 +13,7 @@ import {
 import { ImapAttachment, ImapBodyStructure, ImapEnvelope, ImapMessage } from '../types/mod.ts';
 import { ChunkArray } from '../utils/internal.ts';
 import { CutString } from '../utils/string.ts';
+import { ParseHeaders } from './header.ts';
 
 export function ParseFetch(str: string): ImapMessage {
   const seqMatch = str.match(/^\* (\d+) FETCH/i);
@@ -30,7 +31,7 @@ export function ParseFetch(str: string): ImapMessage {
   if (!Array.isArray(list)) throw new Error('Expected a list, but got an atom as fetch');
 
   let bodyStructure: ImapBodyStructure[] = [];
-  let internalDate: Date | undefined = undefined;
+  let receivedDate: Date | undefined = undefined;
   let envelope: ImapEnvelope | undefined = undefined;
   let uid: number | undefined = undefined;
   let size = -1;
@@ -76,7 +77,7 @@ export function ParseFetch(str: string): ImapMessage {
       }
       case 'INTERNALDATE': {
         const v = ExtractFirstParameterValue(value);
-        if (v) internalDate = new Date(v);
+        if (v) receivedDate = new Date(v);
         break;
       }
       case 'ENVELOPE': {
@@ -87,7 +88,7 @@ export function ParseFetch(str: string): ImapMessage {
         if (typeof value !== 'string') throw new Error('Expected literal for BODY[HEADER]');
         const raw = (value.startsWith('"') && value.endsWith('"')) ? value.slice(1, -1) : value;
 
-        ParseFetchHeaders(headers, raw);
+        ParseHeaders(raw, headers);
         break;
       }
       case 'BODYSTRUCTURE': {
@@ -98,7 +99,7 @@ export function ParseFetch(str: string): ImapMessage {
       case 'BODY[]': {
         const [h, b] = CutString(ParameterString(value) || '', '\r\n\r\n');
 
-        ParseFetchHeaders(body.headers, h);
+        ParseHeaders(h, body.headers);
 
         const contentType = headers!.get('Content-Type') || headers!.get('Content-Type');
         if (!contentType) {
@@ -146,10 +147,10 @@ export function ParseFetch(str: string): ImapMessage {
     uid,
     size,
     flags,
-    receivedDate: internalDate,
+    receivedDate,
 
     envelope: envelope || {
-      date: internalDate,
+      date: receivedDate,
       subject: '',
       from: [],
       sender: [],
@@ -162,36 +163,6 @@ export function ParseFetch(str: string): ImapMessage {
     headers,
     body,
   };
-}
-
-export function ParseFetchHeaders(into: Headers, str: string) {
-  let i = 0;
-  while (i < str.length) {
-    const m = str.indexOf(':', i);
-
-    if (m === -1) break;
-
-    const key = str.slice(i, m).trim();
-    i = m + 1;
-
-    if (key.length === 0) break;
-
-    let val = '';
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      let e = str.indexOf('\r\n', i);
-      if (e === -1) e = str.length;
-
-      const chunk = str.slice(i, e).trim();
-      val += chunk;
-      i = e + 2;
-
-      if (str[i] !== '\t' && str[i] !== ' ') break; // no more values
-      val += ' ';
-      i++;
-    }
-    into.set(key, val);
-  }
 }
 
 export function ParseEnvelope(value: ParenthesizedList): ImapEnvelope {

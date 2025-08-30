@@ -235,17 +235,6 @@ function GetTextSearchTerm(textWhere: WhereText): string | null {
   return null;
 }
 
-// function GetScalarSearchTerms(scalarWhere: WhereScalar<string>): string[] {
-// 	const terms: string[] = [];
-//
-// 	if (scalarWhere.has) terms.push(scalarWhere.has);
-// 	if (scalarWhere.hasEvery) terms.push(...scalarWhere.hasEvery);
-// 	if (scalarWhere.hasSome)  terms.push(...scalarWhere.hasSome);
-// 	// hasNone would need NOT logic, which is complex for scalar fields
-//
-// 	return terms;
-// }
-
 function QuoteString(str: string): string {
   // IMAP strings need to be quoted if they contain spaces or special chars
   if (/[\s"\\]/.test(str)) {
@@ -292,7 +281,7 @@ function MakeAddressSet(criteria: WhereScalar<AddressCriteria>) {
 }
 
 /* ======================================================
-	Where Clause evaluation
+  Where Clause evaluation
 ====================================================== */
 export function MatchesWhere(where: ImapMessageWhere, mail: ImapMessage) {
   if (!MatchWhereValue(where.seq, mail.seq)) return false;
@@ -473,12 +462,8 @@ function AddressComparator(address: ImapAddress, rule: AddressCriteria) {
   return true;
 }
 
-function NumberComparator(a: number, b: number) {
-  return a === b;
-}
-
 /* ======================================================
-	Sort Factor Generation
+  Sort Factor Generation
 ====================================================== */
 
 type ComparatorInstruction = {

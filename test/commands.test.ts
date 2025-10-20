@@ -87,29 +87,39 @@ Deno.test('commands', async (t) => {
     });
   });
 
-  await t.step('login command formats correctly', async (t) => {
-    const result = commands.login('user@example.com', 'password');
-    assertEquals(result, 'LOGIN user@example.com password');
+  await t.step('login', async (t) => {
+    await t.step('command formats correctly', () => {
+      const result = commands.login('user@example.com', 'password');
+      assertEquals(result, 'LOGIN user@example.com password');
+    });
   });
 
-  await t.step('create command formats correctly', async (t) => {
-    const result = commands.create('New Folder');
-    assertEquals(result, 'CREATE "New Folder"');
+  await t.step('create', async (t) => {
+    await t.step('command formats correctly', () => {
+      const result = commands.create('New Folder');
+      assertEquals(result, 'CREATE "New Folder"');
+    });
   });
 
-  await t.step('delete command formats correctly', async (t) => {
-    const result = commands.deleteMailbox('Old Folder');
-    assertEquals(result, 'DELETE "Old Folder"');
+  await t.step('delete', async (t) => {
+    await t.step('command formats correctly', () => {
+      const result = commands.deleteMailbox('Old Folder');
+      assertEquals(result, 'DELETE "Old Folder"');
+    });
   });
 
-  await t.step('copy command formats correctly', async (t) => {
-    const result = commands.copy('1:5', 'Archive');
-    assertEquals(result, 'COPY 1:5 Archive');
+  await t.step('copy', async (t) => {
+    await t.step('command formats correctly', () => {
+      const result = commands.copy('1:5', 'Archive');
+      assertEquals(result, 'COPY 1:5 Archive');
+    });
   });
 
-  await t.step('move command formats correctly', async (t) => {
-    const result = commands.move('1:5', 'Archive');
-    assertEquals(result, 'MOVE 1:5 Archive');
+  await t.step('move', async (t) => {
+    await t.step('command formats correctly', () => {
+      const result = commands.move('1:5', 'Archive');
+      assertEquals(result, 'MOVE 1:5 Archive');
+    });
   });
 
   await t.step('append', async (t) => {

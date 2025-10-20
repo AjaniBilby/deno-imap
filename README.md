@@ -119,45 +119,6 @@ Then run your script with the `--env-file` flag:
 deno run --allow-net --allow-env --env-file=.env your_script.ts
 ```
 
-## Examples
-
-<!-- The [examples](./examples) directory contains sample code demonstrating how to use the IMAP client:
-
-- [Basic Example](./examples/basic.ts): Demonstrates connecting to an IMAP server, listing
-  mailboxes, and checking the INBOX status.
-- [Search Example](./examples/search.ts): Shows how to search for messages using various criteria.
-- [Fetch Example](./examples/fetch.ts): Demonstrates how to fetch and decode message content,
-  including handling multipart messages and different encodings.
-- [Mailboxes Example](./examples/mailboxes.ts): Shows how to manage mailboxes, including creating,
-  renaming, and deleting them.
-- [Advanced Example](./examples/advanced.ts): Shows more advanced features like searching, fetching
-  message content, and manipulating messages.
-- [Attachments Example](./examples/attachments.ts): Demonstrates how to find messages with
-  attachments, fetch attachment data, properly decode it based on the encoding (BASE64,
-  QUOTED-PRINTABLE, etc.), and save attachments to a local folder.
-
-To run the examples, create a `.env` file with your IMAP server details, then run:
-
-```bash
-# Run the basic example
-deno run --allow-net --allow-env --env-file=.env examples/basic.ts
-
-# Run the search example
-deno run --allow-net --allow-env --env-file=.env examples/search.ts
-
-# Run the fetch example
-deno run --allow-net --allow-env --env-file=.env examples/fetch.ts
-
-# Run the mailboxes example
-deno run --allow-net --allow-env --env-file=.env examples/mailboxes.ts
-
-# Run the advanced example
-deno run --allow-net --allow-env --env-file=.env examples/advanced.ts
-
-# Run the attachments example
-deno run --allow-net --allow-env --env-file=.env --allow-write --allow-read examples/attachments.ts
-``` -->
-
 ## License
 
 MIT

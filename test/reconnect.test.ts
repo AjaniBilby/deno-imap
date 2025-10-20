@@ -126,13 +126,12 @@ function createMockClient(options: {
   };
 
   // Override authenticate method to set the authenticated flag
-  client.authenticate = async function () {
+  client.#authenticate = async function () {
     (this as any)._authenticated = true;
     return Promise.resolve();
   };
 
   // Override the reconnect method to track calls and control behavior
-  const originalReconnect = (client as any).reconnect.bind(client);
   (client as any).reconnect = async function () {
     (this as any).reconnectCalled = true;
 
@@ -214,7 +213,6 @@ Deno.test('ImapClient - Automatic reconnection', () => {
   };
 
   // Override listMailboxes
-  const originalListMailboxes = client.listMailboxes;
   client.listMailboxes = function () {
     if (!reconnectCalled) {
       // First call should trigger reconnection

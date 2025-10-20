@@ -33,7 +33,7 @@ try {
 
   // Connect and authenticate
   await client.connect();
-  await client.authenticate();
+  await client.#authenticate();
   console.log('Connected and authenticated successfully');
 
   // Select the INBOX

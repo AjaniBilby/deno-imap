@@ -1,5 +1,5 @@
 import { getMultipartBoundary, parseMultipart } from '@mjackson/multipart-parser';
-import { decodeBase64 } from 'jsr:@std/encoding/base64';
+import { decodeBase64 } from '@std/encoding/base64';
 
 import {
   ExtractFirstParameterValue,

@@ -49,7 +49,7 @@ async function main() {
   try {
     // Connect and authenticate
     await client.connect();
-    await client.authenticate();
+    await client.#authenticate();
     console.log('Connected and authenticated!');
 
     // Example 1: Search for messages from a specific sender

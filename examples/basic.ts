@@ -47,7 +47,7 @@ try {
   console.log('Connected to IMAP server');
 
   // Authenticate
-  await client.authenticate();
+  await client.#authenticate();
   console.log('Authenticated');
 
   // Get server capabilities

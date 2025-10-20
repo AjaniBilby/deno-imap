@@ -83,7 +83,7 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-    const tree   = ParseParenthesized(input)!.val;
+    const tree = ParseParenthesized(input)!.val;
     const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'MULTIPART');

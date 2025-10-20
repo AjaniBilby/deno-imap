@@ -18,7 +18,7 @@ Deno.test('commands', async (t) => {
     });
   });
 
-   await t.step('select', async (t) => {
+  await t.step('select', async (t) => {
     await t.step('formats correctly', () => {
       const result = commands.select('INBOX');
       assertEquals(result, 'SELECT INBOX');

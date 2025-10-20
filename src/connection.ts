@@ -203,7 +203,7 @@ export class ImapConnection {
    * @throws {ImapTimeoutError} If socket has timed out
    */
   async write(data: string): Promise<void> {
-    if (!this._connected) throw new Error('ImapConnectionError');
+    if (!this._connected) throw new Error('Not connected to IMAP server');
 
     // Reset socket activity monitor
     await this.resetSocketActivity();
@@ -296,7 +296,7 @@ export class ImapConnection {
    * @returns Promise that resolves with the line
    */
   async readLine(): Promise<string> {
-    if (!this._connected) throw new Error('ImapConnectionError');
+    if (!this._connected) throw new Error('Not connected to IMAP server');
 
     // Keep adding to the buffer until a new line in present
     let crlfIndex = this.bufferedData.indexOf(CRLF);

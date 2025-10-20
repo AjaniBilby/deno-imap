@@ -1,302 +1,305 @@
 import { assertEquals } from '@std/assert';
 
+import { ParseParenthesized } from '../../src/parsers/parameters.ts';
 import { ParseBodyStructure } from '../../src/parsers/fetch.ts';
 
-Deno.test('ParseBodyStructure - simple text/plain', () => {
-  const input = '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42)';
-  const result = ParseBodyStructure(input);
+Deno.test('ParseBodyStructure', async (t) => {
+  await t.step('simple text/plain', () => {
+    const input = '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42)';
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-  assertEquals(result.type, 'TEXT');
-  assertEquals(result.subtype, 'PLAIN');
-  assertEquals(result.parameters.CHARSET, 'UTF-8');
-  assertEquals(result.encoding, '7BIT');
-  assertEquals(result.size, 1234);
-  assertEquals(result.md5, '42');
-});
+    assertEquals(result.type, 'TEXT');
+    assertEquals(result.subtype, 'PLAIN');
+    assertEquals(result.parameters.CHARSET, 'UTF-8');
+    assertEquals(result.encoding, '7BIT');
+    assertEquals(result.size, 1234);
+    assertEquals(result.md5, '42');
+  });
 
-Deno.test('ParseBodyStructure - text/html', () => {
-  const input =
-    '("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL)';
+  await t.step('text/html', () => {
+    const input =
+      '("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL)';
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-  const result = ParseBodyStructure(input);
+    assertEquals(result.type, 'TEXT');
+    assertEquals(result.subtype, 'HTML');
+    assertEquals(result.parameters.CHARSET, 'UTF-8');
+    assertEquals(result.encoding, 'QUOTED-PRINTABLE');
+    assertEquals(result.size, 4321);
+  });
 
-  assertEquals(result.type, 'TEXT');
-  assertEquals(result.subtype, 'HTML');
-  assertEquals(result.parameters.CHARSET, 'UTF-8');
-  assertEquals(result.encoding, 'QUOTED-PRINTABLE');
-  assertEquals(result.size, 4321);
-});
+  await t.step('application/pdf with disposition', () => {
+    const input =
+      '("APPLICATION" "PDF" ("NAME" "document.pdf") NIL NIL "BASE64" 98765 NIL ("ATTACHMENT" ("FILENAME" "document.pdf")) NIL NIL)';
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - application/pdf with disposition', () => {
-  const input =
-    '("APPLICATION" "PDF" ("NAME" "document.pdf") NIL NIL "BASE64" 98765 NIL ("ATTACHMENT" ("FILENAME" "document.pdf")) NIL NIL)';
+    assertEquals(result.type, 'APPLICATION');
+    assertEquals(result.subtype, 'PDF');
+    assertEquals(result.parameters.NAME, 'document.pdf');
+    assertEquals(result.encoding, 'BASE64');
+    assertEquals(result.size, 98765);
+    assertEquals(result.disposition?.type, 'ATTACHMENT');
+    assertEquals(result.disposition?.parameters.FILENAME, 'document.pdf');
+  });
 
-  const result = ParseBodyStructure(input);
+  await t.step('image/jpeg with id', () => {
+    const input =
+      '("IMAGE" "JPEG" ("NAME" "photo.jpg") "<image001@example.com>" NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL)';
 
-  assertEquals(result.type, 'APPLICATION');
-  assertEquals(result.subtype, 'PDF');
-  assertEquals(result.parameters.NAME, 'document.pdf');
-  assertEquals(result.encoding, 'BASE64');
-  assertEquals(result.size, 98765);
-  assertEquals(result.disposition?.type, 'ATTACHMENT');
-  assertEquals(result.disposition?.parameters.FILENAME, 'document.pdf');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - image/jpeg with id', () => {
-  const input =
-    '("IMAGE" "JPEG" ("NAME" "photo.jpg") "<image001@example.com>" NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL)';
+    assertEquals(result.type, 'IMAGE');
+    assertEquals(result.subtype, 'JPEG');
+    assertEquals(result.parameters.NAME, 'photo.jpg');
+    assertEquals(result.id, '<image001@example.com>');
+    assertEquals(result.encoding, 'BASE64');
+    assertEquals(result.size, 54321);
+    assertEquals(result.disposition?.type, 'INLINE');
+    assertEquals(result.disposition?.parameters.FILENAME, 'photo.jpg');
+  });
 
-  const result = ParseBodyStructure(input);
+  await t.step('message/rfc822', () => {
+    const input =
+      '("MESSAGE" "RFC822" NIL NIL NIL "7BIT" 5678 ("Tue, 1 Apr 2023 12:34:56 +0000" "Test Subject" (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Recipient Name" NIL "recipient" "example.com")) NIL NIL NIL "<message-id@example.com>") ("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) 123 NIL NIL NIL NIL)';
 
-  assertEquals(result.type, 'IMAGE');
-  assertEquals(result.subtype, 'JPEG');
-  assertEquals(result.parameters.NAME, 'photo.jpg');
-  assertEquals(result.id, '<image001@example.com>');
-  assertEquals(result.encoding, 'BASE64');
-  assertEquals(result.size, 54321);
-  assertEquals(result.disposition?.type, 'INLINE');
-  assertEquals(result.disposition?.parameters.FILENAME, 'photo.jpg');
-});
+    const tree = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
+    assertEquals(result.type, 'MESSAGE');
+    assertEquals(result.subtype, 'RFC822');
+    assertEquals(result.encoding, '7BIT');
+    assertEquals(result.size, 5678);
+    assertEquals(result.language, '123');
 
-Deno.test('ParseBodyStructure - message/rfc822', () => {
-  const input =
-    '("MESSAGE" "RFC822" NIL NIL NIL "7BIT" 5678 ("Tue, 1 Apr 2023 12:34:56 +0000" "Test Subject" (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Recipient Name" NIL "recipient" "example.com")) NIL NIL NIL "<message-id@example.com>") ("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) 123 NIL NIL NIL NIL)';
+    // Check nested body structure
+    const nestedBody = result.messageBodyStructure;
+    assertEquals(nestedBody?.disposition?.type, 'TEXT');
+    assertEquals(nestedBody?.subtype, 'PLAIN');
+    assertEquals(nestedBody?.parameters?.CHARSET, 'UTF-8');
+    assertEquals(nestedBody?.size, 1234);
+    assertEquals(nestedBody?.lines, 42);
+  });
 
-  const result = ParseBodyStructure(input);
-  assertEquals(result.type, 'MESSAGE');
-  assertEquals(result.subtype, 'RFC822');
-  assertEquals(result.encoding, '7BIT');
-  assertEquals(result.size, 5678);
-  assertEquals(result.language, '123');
+  await t.step('multipart/mixed', () => {
+    const input =
+      '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-  // Check nested body structure
-  const nestedBody = result.messageBodyStructure;
-  assertEquals(nestedBody?.disposition?.type, 'TEXT');
-  assertEquals(nestedBody?.subtype, 'PLAIN');
-  assertEquals(nestedBody?.parameters?.CHARSET, 'UTF-8');
-  assertEquals(nestedBody?.size, 1234);
-  assertEquals(nestedBody?.lines, 42);
-});
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
-Deno.test('ParseBodyStructure - simple multipart/mixed', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
+    assertEquals(result.type, 'MULTIPART');
+    assertEquals(result.subtype, 'MIXED');
+    assertEquals(result.parameters?.BOUNDARY, '----boundary123');
 
-  const result = ParseBodyStructure(input);
+    // Check child parts
+    assertEquals(result.childParts?.length, 2);
 
-  assertEquals(result.type, 'MULTIPART');
-  assertEquals(result.subtype, 'MIXED');
-  assertEquals(result.parameters?.BOUNDARY, '----boundary123');
+    // First part - text/plain
+    const textPart = result.childParts?.[0];
+    assertEquals(textPart?.type, 'TEXT');
+    assertEquals(textPart?.subtype, 'PLAIN');
+    assertEquals(textPart?.parameters?.CHARSET, 'UTF-8');
+    assertEquals(textPart?.size, 1234);
+    assertEquals(textPart?.lines, 42);
 
-  // Check child parts
-  assertEquals(result.childParts?.length, 2);
+    // Second part - image/jpeg
+    const imagePart = result.childParts?.[1];
+    assertEquals(imagePart?.type, 'IMAGE');
+    assertEquals(imagePart?.subtype, 'JPEG');
+    assertEquals(imagePart?.parameters?.NAME, 'photo.jpg');
+    assertEquals(imagePart?.encoding, 'BASE64');
+    assertEquals(imagePart?.size, 54321);
+    assertEquals(imagePart?.disposition?.type, 'INLINE');
+    assertEquals(imagePart?.disposition?.parameters?.FILENAME, 'photo.jpg');
+  });
 
-  // First part - text/plain
-  const textPart = result.childParts?.[0];
-  assertEquals(textPart?.type, 'TEXT');
-  assertEquals(textPart?.subtype, 'PLAIN');
-  assertEquals(textPart?.parameters?.CHARSET, 'UTF-8');
-  assertEquals(textPart?.size, 1234);
-  assertEquals(textPart?.lines, 42);
+  await t.step('nested multipart', () => {
+    const input =
+      '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) (("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "RELATED" ("BOUNDARY" "----related456") NIL NIL NIL) "ALTERNATIVE" ("BOUNDARY" "----alternative789") NIL NIL NIL)';
 
-  // Second part - image/jpeg
-  const imagePart = result.childParts?.[1];
-  assertEquals(imagePart?.type, 'IMAGE');
-  assertEquals(imagePart?.subtype, 'JPEG');
-  assertEquals(imagePart?.parameters?.NAME, 'photo.jpg');
-  assertEquals(imagePart?.encoding, 'BASE64');
-  assertEquals(imagePart?.size, 54321);
-  assertEquals(imagePart?.disposition?.type, 'INLINE');
-  assertEquals(imagePart?.disposition?.parameters?.FILENAME, 'photo.jpg');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - nested multipart', () => {
-  const input =
-    '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) (("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "RELATED" ("BOUNDARY" "----related456") NIL NIL NIL) "ALTERNATIVE" ("BOUNDARY" "----alternative789") NIL NIL NIL)';
+    assertEquals(result.type, 'MULTIPART');
+    assertEquals(result.subtype, 'ALTERNATIVE');
+    assertEquals(result.parameters?.BOUNDARY, '----alternative789');
 
-  const result = ParseBodyStructure(input);
+    // Check child parts
+    assertEquals(result.childParts?.length, 2);
 
-  assertEquals(result.type, 'MULTIPART');
-  assertEquals(result.subtype, 'ALTERNATIVE');
-  assertEquals(result.parameters?.BOUNDARY, '----alternative789');
+    // First part - text/plain
+    const textPart = result.childParts?.[0];
+    assertEquals(textPart?.type, 'TEXT');
+    assertEquals(textPart?.subtype, 'PLAIN');
+    assertEquals(textPart?.parameters?.CHARSET, 'UTF-8');
+    assertEquals(textPart?.size, 1234);
+    assertEquals(textPart?.lines, 42);
 
-  // Check child parts
-  assertEquals(result.childParts?.length, 2);
+    // Second part - multipart/related
+    const relatedPart = result.childParts?.[1];
+    assertEquals(relatedPart?.type, 'MULTIPART');
+    assertEquals(relatedPart?.subtype, 'RELATED');
+    assertEquals(relatedPart?.parameters?.BOUNDARY, '----related456');
 
-  // First part - text/plain
-  const textPart = result.childParts?.[0];
-  assertEquals(textPart?.type, 'TEXT');
-  assertEquals(textPart?.subtype, 'PLAIN');
-  assertEquals(textPart?.parameters?.CHARSET, 'UTF-8');
-  assertEquals(textPart?.size, 1234);
-  assertEquals(textPart?.lines, 42);
+    // Check nested parts in multipart/related
+    assertEquals(relatedPart?.childParts?.length, 2);
 
-  // Second part - multipart/related
-  const relatedPart = result.childParts?.[1];
-  assertEquals(relatedPart?.type, 'MULTIPART');
-  assertEquals(relatedPart?.subtype, 'RELATED');
-  assertEquals(relatedPart?.parameters?.BOUNDARY, '----related456');
+    // First nested part - text/html
+    const htmlPart = relatedPart?.childParts?.[0];
+    assertEquals(htmlPart?.type, 'TEXT');
+    assertEquals(htmlPart?.subtype, 'HTML');
+    assertEquals(htmlPart?.parameters?.CHARSET, 'UTF-8');
+    assertEquals(htmlPart?.encoding, 'QUOTED-PRINTABLE');
+    assertEquals(htmlPart?.size, 4321);
 
-  // Check nested parts in multipart/related
-  assertEquals(relatedPart?.childParts?.length, 2);
+    // Second nested part - image/jpeg
+    const imagePart = relatedPart?.childParts?.[1];
+    assertEquals(imagePart?.type, 'IMAGE');
+    assertEquals(imagePart?.subtype, 'JPEG');
+    assertEquals(imagePart?.parameters?.NAME, 'photo.jpg');
+    assertEquals(imagePart?.encoding, 'BASE64');
+    assertEquals(imagePart?.size, 54321);
+    assertEquals(imagePart?.disposition?.type, 'INLINE');
+    assertEquals(imagePart?.disposition?.parameters.FILENAME, 'photo.jpg');
+  });
 
-  // First nested part - text/html
-  const htmlPart = relatedPart?.childParts?.[0];
-  assertEquals(htmlPart?.type, 'TEXT');
-  assertEquals(htmlPart?.subtype, 'HTML');
-  assertEquals(htmlPart?.parameters?.CHARSET, 'UTF-8');
-  assertEquals(htmlPart?.encoding, 'QUOTED-PRINTABLE');
-  assertEquals(htmlPart?.size, 4321);
+  await t.step('with language and location', () => {
+    const input =
+      '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL ("EN-US" "FR-CA") "https://example.com/message")';
 
-  // Second nested part - image/jpeg
-  const imagePart = relatedPart?.childParts?.[1];
-  assertEquals(imagePart?.type, 'IMAGE');
-  assertEquals(imagePart?.subtype, 'JPEG');
-  assertEquals(imagePart?.parameters?.NAME, 'photo.jpg');
-  assertEquals(imagePart?.encoding, 'BASE64');
-  assertEquals(imagePart?.size, 54321);
-  assertEquals(imagePart?.disposition?.type, 'INLINE');
-  assertEquals(imagePart?.disposition?.parameters.FILENAME, 'photo.jpg');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - with language and location', () => {
-  const input =
-    '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL ("EN-US" "FR-CA") "https://example.com/message")';
+    assertEquals(result.type, 'TEXT');
+    assertEquals(result.subtype, 'PLAIN');
+    assertEquals(result.parameters.CHARSET, 'UTF-8');
+    assertEquals(result.encoding, '7BIT');
+    assertEquals(result.size, 1234);
+    assertEquals(result.lines, 42);
+    assertEquals(result.language, ['EN-US', 'FR-CA']);
+    assertEquals(result.location, 'https://example.com/message');
+  });
 
-  const result = ParseBodyStructure(input);
+  await t.step('invalid input', () => {
+    const input = '("TEXT")'; // Too few elements
 
-  assertEquals(result.type, 'TEXT');
-  assertEquals(result.subtype, 'PLAIN');
-  assertEquals(result.parameters.CHARSET, 'UTF-8');
-  assertEquals(result.encoding, '7BIT');
-  assertEquals(result.size, 1234);
-  assertEquals(result.lines, 42);
-  assertEquals(result.language, ['EN-US', 'FR-CA']);
-  assertEquals(result.location, 'https://example.com/message');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - invalid input', () => {
-  const input = '("TEXT")'; // Too few elements
+    // Should return default values
+    assertEquals(result.type, 'TEXT');
+    assertEquals(result.subtype, 'PLAIN');
+    assertEquals(result.encoding, '7BIT');
+    assertEquals(result.size, 0);
+    assertEquals(Object.keys(result.parameters).length, 0);
+  });
 
-  const result = ParseBodyStructure(input);
+  t.step('with MD5', () => {
+    const input =
+      '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 "d41d8cd98f00b204e9800998ecf8427e" NIL NIL NIL)';
 
-  // Should return default values
-  assertEquals(result.type, 'TEXT');
-  assertEquals(result.subtype, 'PLAIN');
-  assertEquals(result.encoding, '7BIT');
-  assertEquals(result.size, 0);
-  assertEquals(Object.keys(result.parameters).length, 0);
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - with MD5', () => {
-  const input =
-    '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 "d41d8cd98f00b204e9800998ecf8427e" NIL NIL NIL)';
+    assertEquals(result.type, 'TEXT');
+    assertEquals(result.subtype, 'PLAIN');
+    assertEquals(result.parameters.CHARSET, 'UTF-8');
+    assertEquals(result.encoding, '7BIT');
+    assertEquals(result.size, 1234);
+    assertEquals(result.lines, 42);
+    assertEquals(result.md5, 'd41d8cd98f00b204e9800998ecf8427e');
+  });
 
-  const result = ParseBodyStructure(input);
+  await t.step('complex multipart structure with multiple levels', () => {
+    // This is a complex structure similar to what we saw in the real-world example
+    const input =
+      '((("text" "plain" ("charset" "utf-8") NIL NIL "base64" 14 1 NIL NIL NIL NIL)("text" "html" ("charset" "utf-8") NIL NIL "base64" 636 10 NIL NIL NIL NIL) "alternative" ("boundary" "b2=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)("image" "png" ("name" "deno.png") NIL NIL "base64" 760752 NIL ("attachment" ("filename" "deno.png")) NIL NIL) "mixed" ("boundary" "b1=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)';
 
-  assertEquals(result.type, 'TEXT');
-  assertEquals(result.subtype, 'PLAIN');
-  assertEquals(result.parameters.CHARSET, 'UTF-8');
-  assertEquals(result.encoding, '7BIT');
-  assertEquals(result.size, 1234);
-  assertEquals(result.lines, 42);
-  assertEquals(result.md5, 'd41d8cd98f00b204e9800998ecf8427e');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - complex multipart structure with multiple levels', () => {
-  // This is a complex structure similar to what we saw in the real-world example
-  const input =
-    '((("text" "plain" ("charset" "utf-8") NIL NIL "base64" 14 1 NIL NIL NIL NIL)("text" "html" ("charset" "utf-8") NIL NIL "base64" 636 10 NIL NIL NIL NIL) "alternative" ("boundary" "b2=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)("image" "png" ("name" "deno.png") NIL NIL "base64" 760752 NIL ("attachment" ("filename" "deno.png")) NIL NIL) "mixed" ("boundary" "b1=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)';
+    // Check the top-level structure
+    assertEquals(result.type, 'MULTIPART');
+    assertEquals(result.subtype, 'MIXED');
+    assertEquals(result.parameters?.BOUNDARY, 'b1=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM');
 
-  const result = ParseBodyStructure(input);
+    // Check that we have two child parts
+    assertEquals(result.childParts?.length, 2);
 
-  // Check the top-level structure
-  assertEquals(result.type, 'MULTIPART');
-  assertEquals(result.subtype, 'MIXED');
-  assertEquals(result.parameters?.BOUNDARY, 'b1=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM');
+    // First child is a multipart/alternative
+    const alternativePart = result.childParts?.[0];
+    assertEquals(alternativePart?.type, 'MULTIPART');
+    assertEquals(alternativePart?.subtype, 'ALTERNATIVE');
+    assertEquals(
+      alternativePart?.parameters?.BOUNDARY,
+      'b2=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM',
+    );
+    assertEquals(alternativePart?.childParts?.length, 2);
 
-  // Check that we have two child parts
-  assertEquals(result.childParts?.length, 2);
+    // Check the text/plain part inside alternative
+    const textPlainPart = alternativePart?.childParts?.[0];
+    assertEquals(textPlainPart?.type, 'TEXT');
+    assertEquals(textPlainPart?.subtype, 'PLAIN');
+    assertEquals(textPlainPart?.parameters?.CHARSET, 'utf-8');
+    assertEquals(textPlainPart?.encoding, 'BASE64');
+    assertEquals(textPlainPart?.size, 14);
+    assertEquals(textPlainPart?.lines, 1);
 
-  // First child is a multipart/alternative
-  const alternativePart = result.childParts?.[0];
-  assertEquals(alternativePart?.type, 'MULTIPART');
-  assertEquals(alternativePart?.subtype, 'ALTERNATIVE');
-  assertEquals(
-    alternativePart?.parameters?.BOUNDARY,
-    'b2=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM',
-  );
-  assertEquals(alternativePart?.childParts?.length, 2);
+    // Check the text/html part inside alternative
+    const textHtmlPart = alternativePart?.childParts?.[1];
+    assertEquals(textHtmlPart?.type, 'TEXT');
+    assertEquals(textHtmlPart?.subtype, 'HTML');
+    assertEquals(textHtmlPart?.parameters?.CHARSET, 'utf-8');
+    assertEquals(textHtmlPart?.encoding, 'BASE64');
+    assertEquals(textHtmlPart?.size, 636);
+    assertEquals(textHtmlPart?.lines, 10);
 
-  // Check the text/plain part inside alternative
-  const textPlainPart = alternativePart?.childParts?.[0];
-  assertEquals(textPlainPart?.type, 'TEXT');
-  assertEquals(textPlainPart?.subtype, 'PLAIN');
-  assertEquals(textPlainPart?.parameters?.CHARSET, 'utf-8');
-  assertEquals(textPlainPart?.encoding, 'BASE64');
-  assertEquals(textPlainPart?.size, 14);
-  assertEquals(textPlainPart?.lines, 1);
+    // Second child is an image/png attachment
+    const imagePart = result.childParts?.[1];
+    assertEquals(imagePart?.type, 'IMAGE');
+    assertEquals(imagePart?.subtype, 'PNG');
+    assertEquals(imagePart?.parameters?.NAME, 'deno.png');
+    assertEquals(imagePart?.encoding, 'BASE64');
+    assertEquals(imagePart?.size, 760752);
+    assertEquals(imagePart?.disposition.type, 'ATTACHMENT');
+    assertEquals(imagePart?.disposition.parameters?.FILENAME, 'deno.png');
+  });
 
-  // Check the text/html part inside alternative
-  const textHtmlPart = alternativePart?.childParts?.[1];
-  assertEquals(textHtmlPart?.type, 'TEXT');
-  assertEquals(textHtmlPart?.subtype, 'HTML');
-  assertEquals(textHtmlPart?.parameters?.CHARSET, 'utf-8');
-  assertEquals(textHtmlPart?.encoding, 'BASE64');
-  assertEquals(textHtmlPart?.size, 636);
-  assertEquals(textHtmlPart?.lines, 10);
+  await t.step('multipart structure with unusual format', () => {
+    // This tests the enhanced isMultipartStructure function with a structure that doesn't follow the typical pattern
+    const input =
+      '("text" "plain" ("charset" "utf-8") NIL NIL "7BIT" 100 10 NIL NIL NIL NIL) ("image" "jpeg" ("name" "test.jpg") NIL NIL "BASE64" 5000 NIL ("ATTACHMENT" ("FILENAME" "test.jpg")) NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL';
 
-  // Second child is an image/png attachment
-  const imagePart = result.childParts?.[1];
-  assertEquals(imagePart?.type, 'IMAGE');
-  assertEquals(imagePart?.subtype, 'PNG');
-  assertEquals(imagePart?.parameters?.NAME, 'deno.png');
-  assertEquals(imagePart?.encoding, 'BASE64');
-  assertEquals(imagePart?.size, 760752);
-  assertEquals(imagePart?.disposition.type, 'ATTACHMENT');
-  assertEquals(imagePart?.disposition.parameters?.FILENAME, 'deno.png');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - multipart structure with unusual format', () => {
-  // This tests the enhanced isMultipartStructure function with a structure that doesn't follow the typical pattern
-  const input =
-    '("text" "plain" ("charset" "utf-8") NIL NIL "7BIT" 100 10 NIL NIL NIL NIL) ("image" "jpeg" ("name" "test.jpg") NIL NIL "BASE64" 5000 NIL ("ATTACHMENT" ("FILENAME" "test.jpg")) NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL';
+    // Check that it was correctly identified as a multipart structure
+    assertEquals(result.type, 'MULTIPART');
+    assertEquals(result.subtype, 'MIXED');
+    assertEquals(result.parameters?.BOUNDARY, '----boundary123');
 
-  const result = ParseBodyStructure(input);
+    // Check that we have two child parts
+    assertEquals(result.childParts?.length, 2);
 
-  // Check that it was correctly identified as a multipart structure
-  assertEquals(result.type, 'MULTIPART');
-  assertEquals(result.subtype, 'MIXED');
-  assertEquals(result.parameters?.BOUNDARY, '----boundary123');
+    // First child is text/plain
+    const textPart = result.childParts?.[0];
+    assertEquals(textPart?.type, 'TEXT');
+    assertEquals(textPart?.subtype, 'PLAIN');
 
-  // Check that we have two child parts
-  assertEquals(result.childParts?.length, 2);
+    // Second child is an image attachment
+    const imagePart = result.childParts?.[1];
+    assertEquals(imagePart?.type, 'IMAGE');
+    assertEquals(imagePart?.subtype, 'JPEG');
+    assertEquals(imagePart?.disposition.type, 'ATTACHMENT');
+  });
 
-  // First child is text/plain
-  const textPart = result.childParts?.[0];
-  assertEquals(textPart?.type, 'TEXT');
-  assertEquals(textPart?.subtype, 'PLAIN');
+  await t.step('simple', () => {
+    // This tests the enhanced isMultipartStructure function with a structure that only has a subtype indicator
+    // We need to provide a more complete structure for the parser to handle
+    const input =
+      '(("TEXT" "PLAIN" NIL NIL NIL "7BIT" 0 0 NIL NIL NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-  // Second child is an image attachment
-  const imagePart = result.childParts?.[1];
-  assertEquals(imagePart?.type, 'IMAGE');
-  assertEquals(imagePart?.subtype, 'JPEG');
-  assertEquals(imagePart?.disposition.type, 'ATTACHMENT');
-});
+    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
 
-Deno.test('ParseBodyStructure - multipart structure with only subtype indicator', () => {
-  // This tests the enhanced isMultipartStructure function with a structure that only has a subtype indicator
-  // We need to provide a more complete structure for the parser to handle
-  const input =
-    '(("TEXT" "PLAIN" NIL NIL NIL "7BIT" 0 0 NIL NIL NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
+    // Check that it was correctly identified as a multipart structure
+    assertEquals(result.type, 'MULTIPART');
+    assertEquals(result.subtype, 'MIXED');
+    assertEquals(result.parameters?.BOUNDARY, '----boundary123');
 
-  const result = ParseBodyStructure(input);
-
-  // Check that it was correctly identified as a multipart structure
-  assertEquals(result.type, 'MULTIPART');
-  assertEquals(result.subtype, 'MIXED');
-  assertEquals(result.parameters?.BOUNDARY, '----boundary123');
-
-  // This structure has one child part
-  assertEquals(result.childParts?.length, 1);
+    // This structure has one child part
+    assertEquals(result.childParts?.length, 1);
+  });
 });

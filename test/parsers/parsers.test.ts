@@ -6,7 +6,9 @@ import { ParseBodyStructure } from '../../src/parsers/fetch.ts';
 Deno.test('ParseBodyStructure', async (t) => {
   await t.step('simple text/plain', () => {
     const input = '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42)';
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'TEXT');
     assertEquals(result.subtype, 'PLAIN');
@@ -19,7 +21,9 @@ Deno.test('ParseBodyStructure', async (t) => {
   await t.step('text/html', () => {
     const input =
       '("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL)';
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'TEXT');
     assertEquals(result.subtype, 'HTML');
@@ -31,7 +35,9 @@ Deno.test('ParseBodyStructure', async (t) => {
   await t.step('application/pdf with disposition', () => {
     const input =
       '("APPLICATION" "PDF" ("NAME" "document.pdf") NIL NIL "BASE64" 98765 NIL ("ATTACHMENT" ("FILENAME" "document.pdf")) NIL NIL)';
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'APPLICATION');
     assertEquals(result.subtype, 'PDF');
@@ -46,7 +52,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '("IMAGE" "JPEG" ("NAME" "photo.jpg") "<image001@example.com>" NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL)';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'IMAGE');
     assertEquals(result.subtype, 'JPEG');
@@ -62,8 +69,9 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '("MESSAGE" "RFC822" NIL NIL NIL "7BIT" 5678 ("Tue, 1 Apr 2023 12:34:56 +0000" "Test Subject" (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Sender Name" NIL "sender" "example.com")) (("Recipient Name" NIL "recipient" "example.com")) NIL NIL NIL "<message-id@example.com>") ("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) 123 NIL NIL NIL NIL)';
 
-    const tree = ParseParenthesized(input)!.val;
+    const tree   = ParseParenthesized(input)!.val;
     const result = ParseBodyStructure(tree);
+
     assertEquals(result.type, 'MESSAGE');
     assertEquals(result.subtype, 'RFC822');
     assertEquals(result.encoding, '7BIT');
@@ -83,7 +91,7 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "MIXED" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-    const tree = ParseParenthesized(input)!.val;
+    const tree   = ParseParenthesized(input)!.val;
     const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'MULTIPART');
@@ -116,7 +124,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '(("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL NIL NIL) (("TEXT" "HTML" ("CHARSET" "UTF-8") NIL NIL "QUOTED-PRINTABLE" 4321 NIL NIL NIL NIL) ("IMAGE" "JPEG" ("NAME" "photo.jpg") NIL NIL "BASE64" 54321 NIL ("INLINE" ("FILENAME" "photo.jpg")) NIL NIL) "RELATED" ("BOUNDARY" "----related456") NIL NIL NIL) "ALTERNATIVE" ("BOUNDARY" "----alternative789") NIL NIL NIL)';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'MULTIPART');
     assertEquals(result.subtype, 'ALTERNATIVE');
@@ -165,7 +174,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 NIL NIL ("EN-US" "FR-CA") "https://example.com/message")';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'TEXT');
     assertEquals(result.subtype, 'PLAIN');
@@ -180,7 +190,8 @@ Deno.test('ParseBodyStructure', async (t) => {
   await t.step('invalid input', () => {
     const input = '("TEXT")'; // Too few elements
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     // Should return default values
     assertEquals(result.type, 'TEXT');
@@ -194,7 +205,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '("TEXT" "PLAIN" ("CHARSET" "UTF-8") NIL NIL "7BIT" 1234 42 "d41d8cd98f00b204e9800998ecf8427e" NIL NIL NIL)';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     assertEquals(result.type, 'TEXT');
     assertEquals(result.subtype, 'PLAIN');
@@ -210,7 +222,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '((("text" "plain" ("charset" "utf-8") NIL NIL "base64" 14 1 NIL NIL NIL NIL)("text" "html" ("charset" "utf-8") NIL NIL "base64" 636 10 NIL NIL NIL NIL) "alternative" ("boundary" "b2=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)("image" "png" ("name" "deno.png") NIL NIL "base64" 760752 NIL ("attachment" ("filename" "deno.png")) NIL NIL) "mixed" ("boundary" "b1=_zlPo1LsLmCEZyj4E5yNqPAuKEy9GtZqYMxPB8uIWHvM") NIL NIL NIL)';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     // Check the top-level structure
     assertEquals(result.type, 'MULTIPART');
@@ -264,7 +277,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '("text" "plain" ("charset" "utf-8") NIL NIL "7BIT" 100 10 NIL NIL NIL NIL) ("image" "jpeg" ("name" "test.jpg") NIL NIL "BASE64" 5000 NIL ("ATTACHMENT" ("FILENAME" "test.jpg")) NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     // Check that it was correctly identified as a multipart structure
     assertEquals(result.type, 'MULTIPART');
@@ -292,7 +306,8 @@ Deno.test('ParseBodyStructure', async (t) => {
     const input =
       '(("TEXT" "PLAIN" NIL NIL NIL "7BIT" 0 0 NIL NIL NIL NIL) "mixed" ("BOUNDARY" "----boundary123") NIL NIL NIL)';
 
-    const result = ParseBodyStructure(ParseParenthesized(input)!.val);
+    const tree   = ParseParenthesized(input)!.val;
+    const result = ParseBodyStructure(tree);
 
     // Check that it was correctly identified as a multipart structure
     assertEquals(result.type, 'MULTIPART');

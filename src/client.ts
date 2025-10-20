@@ -20,7 +20,6 @@ import * as engine from './engine.ts';
  * ```
  */
 
-
 const DEFAULT_OPTIONS: Partial<ImapOptions> = {
   autoReconnect: true,
   maxReconnectAttempts: 3,
@@ -53,7 +52,6 @@ export class ImapClient {
 
   /**
    * Creates a new IMAP client
-   * @param options Client options
    */
   constructor(options: ImapOptions) {
     this.#options = { ...DEFAULT_OPTIONS, ...options };
@@ -160,15 +158,6 @@ export class ImapClient {
     }
   }
 
-  /**
-   * Reconnects to the IMAP server
-   * @returns Promise that resolves when reconnected
-   * @throws {ImapConnectionError} If reconnection fails
-   */
-  async forceReconnect(): Promise<void> {
-    await this.#reconnect();
-  }
-
   async #updateCapabilities(): Promise<string[]> {
     const response = await this.#executeCommand(commands.capability());
 
@@ -227,11 +216,13 @@ export class ImapClient {
 
   /**
    * Lists available mailboxes on the server
-   * @param reference Reference name for the mailbox hierarchy (default: '')
-   * @param mailbox Mailbox name pattern to match (default: '*')
+   * @param reference - Reference name for the mailbox hierarchy (default: '')
+   * @param mailbox - Mailbox name pattern to match (default: '*')
    * @returns Promise that resolves with an array of mailboxes
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // List all mailboxes
    * const allMailboxes = await client.listMailboxes();
    * console.log(allMailboxes.map(mb => mb.name)); // ['INBOX', 'Sent', 'Drafts', ...]
@@ -266,28 +257,24 @@ export class ImapClient {
     return mailboxes;
   }
 
-  /**
-   * Gets the status of a specific mailbox
-   * @param mailbox Name of the mailbox to check
-   * @param items Status items to retrieve (default: ['MESSAGES', 'RECENT', 'UNSEEN', 'UIDNEXT', 'UIDVALIDITY'])
-   * @returns Promise that resolves with mailbox status information
-   * @example
-   * ```ts
-   * // Get full status of INBOX
-   * const status = await client.getMailboxStatus('INBOX');
-   * console.log(`INBOX has ${status.messages} messages, ${status.unseen} unread`);
-   *
-   * // Get only message counts
-   * const counts = await client.getMailboxStatus('INBOX', ['MESSAGES', 'UNSEEN']);
-   * console.log(`${counts.messages} total, ${counts.unseen} unread`);
-   * ```
-   */
-  async getMailboxStatus(
+  // TODO: improve this API and then expose it publicly
+  async #getMailboxStatus(
     mailbox: string,
-    items = ['MESSAGES', 'RECENT', 'UNSEEN', 'UIDNEXT', 'UIDVALIDITY'],
+    args: {
+      include: Record<
+        'MESSAGES' | 'RECENT' | 'UNSEEN' | 'UIDNEXT' | 'UIDVALIDITY' | string,
+        boolean
+      >;
+    },
   ): Promise<Partial<ImapMailbox>> {
     this.#assertConnected();
     if (!this.#authenticated) await this.#authenticate();
+
+    const items: string[] = [];
+    for (const item in args.include) {
+      if (!args.include[item]) continue;
+      items.push(item.toUpperCase());
+    }
 
     const response = await this.#executeCommand(commands.status(mailbox, items));
 
@@ -304,12 +291,17 @@ export class ImapClient {
     return { name: mailbox };
   }
 
+  // TODO: improve the mailbox APIs to be more similar to the mail reading
+  // async findMailbox(name: string): Promise<ImapMailbox | undefined>{};
+
   /**
    * Selects a mailbox for read/write access
-   * @param mailbox Name of the mailbox to select
-   * @param allowStale Whether to allow returning cached mailbox info if already selected (default: true)
+   * @param mailbox - Name of the mailbox to select
+   * @param allowStale - Whether to allow returning cached mailbox info if already selected (default: true)
    * @returns Promise that resolves with the selected mailbox information
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // Select INBOX for reading/writing emails
    * const inbox = await client.selectMailbox('INBOX');
    * console.log(`Selected ${inbox.name} with ${inbox.exists} messages`);
@@ -332,7 +324,7 @@ export class ImapClient {
 
     // Get the actual unseen count using STATUS command
     try {
-      const status = await this.getMailboxStatus(mailbox, ['UNSEEN']);
+      const status = await this.#getMailboxStatus(mailbox, { include: { UNSEEN: true } });
       if (status.unseen !== undefined) {
         mailboxInfo.unseen = status.unseen;
       }
@@ -352,10 +344,12 @@ export class ImapClient {
 
   /**
    * Examines a mailbox for read-only access
-   * @param mailbox Name of the mailbox to examine
+   * @param mailbox - Name of the mailbox to examine
    * @returns Promise that resolves with the mailbox information
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // Examine INBOX in read-only mode
    * const inbox = await client.examineMailbox('INBOX');
    * console.log(`Examined ${inbox.name} with ${inbox.exists} messages (read-only)`);
@@ -384,15 +378,15 @@ export class ImapClient {
 
   /**
    * Finds multiple messages in a mailbox based on search criteria
-   * @param mailbox Name of the mailbox to search
-   * @param args Search criteria including where conditions, ordering, and data to include
+   * @param mailbox - Name of the mailbox to search
+   * @param args - Search criteria including where conditions, ordering, and data to include
    * @returns Promise that resolves with an array of matching messages
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // Find all unread messages
-   * const unread = await client.findMany('INBOX', {
-   *   where: { flags: { hasNone: ['Seen'] } }
-   * });
+   * const unread = await client.findMany('INBOX', { where: { flags: { hasNone: ['Seen'] } } });
    *
    * // Find recent emails from a specific sender
    * const fromBoss = await client.findMany('INBOX', {
@@ -495,11 +489,13 @@ export class ImapClient {
 
   /**
    * Finds the first message matching the search criteria
-   * @param mailbox Name of the mailbox to search
-   * @param args Search criteria including where conditions, ordering, and data to include
+   * @param mailbox - Name of the mailbox to search
+   * @param args - Search criteria including where conditions, ordering, and data to include
    * @returns Promise that resolves with the first matching message or undefined if none found
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // Find the most recent unread email
    * const latestUnread = await client.findFirst('INBOX', {
    *   where:   { flags: { hasNone: ['Seen'] } },
@@ -507,9 +503,7 @@ export class ImapClient {
    *   include: { envelope: true, body: true }
    * });
    *
-   * if (latestUnread) {
-   *   console.log(`Latest unread: ${latestUnread.envelope?.subject}`);
-   * }
+   * if (latestUnread) console.log(`Latest unread: ${latestUnread.envelope?.subject}`);
    *
    * // Find oldest message in mailbox
    * const oldest = await client.findFirst('INBOX', {
@@ -528,23 +522,25 @@ export class ImapClient {
 
   /**
    * Finds the first message matching the search criteria, throws if not found
-   * @param mailbox Name of the mailbox to search
-   * @param args Search criteria including where conditions, ordering, and data to include
+   * @param mailbox - Name of the mailbox to search
+   * @param args - Search criteria including where conditions, ordering, and data to include
    * @returns Promise that resolves with the first matching message
    * @throws {Error} If no message is found
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // No need to check for undefined - will throw if not found
    * const message = await client.findFirstOrThrow('INBOX', {
    *   where: {
    *     envelope: { messageId: { equals: '<specific-id@domain.com>' } }
    *   },
-   *   include: { body: true, headers: true }
+   *   include: { size: true, envelope: true, body: true, headers: true }
    * });
    *
    * // Can directly use the result without null checks
    * console.log('Subject:', message.envelope.subject);
-   * console.log('Body length:', message.body.length);
+   * console.log('Body length:', message.size);
    *
    * // Find the latest unread email (throws if none exist)
    * const latestUnread = await client.findFirstOrThrow('INBOX', {
@@ -571,11 +567,13 @@ export class ImapClient {
 
   /**
    * Updates multiple messages with new flags or moves them to another mailbox
-   * @param mailbox Name of the mailbox containing the messages
-   * @param args designed to take an output from findMany
+   * @param mailbox - Name of the mailbox containing the messages
+   * @param args - designed to take an output from findMany
    * @returns Promise that resolves when the update is complete
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // Mark messages as read
    * await client.updateMany('INBOX', {
    *   where: [{ uid: 123 }, { uid: 456 }],
@@ -599,8 +597,8 @@ export class ImapClient {
    *   where: [{ uid: 999 }],
    *   data: {
    *     flags: {
+   *       add:    ['Seen' ],
    *       remove: ['Draft'],
-   *       add: ['Seen']
    *     }
    *   }
    * });
@@ -610,7 +608,7 @@ export class ImapClient {
     where: Array<{ seq?: number; uid?: number }>;
 
     data: {
-      flags: Partial<Record<'add' | 'remove' | 'set', Flag[]>>;
+      flags?: Partial<Record<'add' | 'remove' | 'set', Flag[]>>;
       mailbox?: string;
     };
   }) {
@@ -633,39 +631,47 @@ export class ImapClient {
       uid: uid.size > 0 ? [...uid.values()].join(',') : undefined,
     };
 
-    if (args.data.flags.add) {
-      const flags = args.data.flags.add.map((x) =>
-        '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
-      );
-      if (sequence.seq) {
-        await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'add', false));
+    if (args.data.flags) {
+      if (args.data.flags.add) {
+        const flags = args.data.flags.add.map((x) =>
+          '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
+        );
+        if (sequence.seq) {
+          await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'add', false));
+        }
+        if (sequence.uid) {
+          await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'add', true));
+        }
       }
-      if (sequence.uid) {
-        await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'add', true));
-      }
-    }
 
-    if (args.data.flags.set) {
-      const flags = args.data.flags.set.map((x) =>
-        '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
-      );
-      if (sequence.seq) {
-        await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'set', false));
+      if (args.data.flags.set) {
+        const flags = args.data.flags.set.map((x) =>
+          '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
+        );
+        if (sequence.seq) {
+          await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'set', false));
+        }
+        if (sequence.uid) {
+          await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'set', true));
+        }
       }
-      if (sequence.uid) {
-        await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'set', true));
-      }
-    }
 
-    if (args.data.flags.remove) {
-      const flags = args.data.flags.remove.map((x) =>
-        '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
-      );
-      if (sequence.seq) {
-        await this.#executeCommandIn(mailbox, commands.store(sequence.seq, flags, 'remove', false));
-      }
-      if (sequence.uid) {
-        await this.#executeCommandIn(mailbox, commands.store(sequence.uid, flags, 'remove', true));
+      if (args.data.flags.remove) {
+        const flags = args.data.flags.remove.map((x) =>
+          '\\' + x[0].toUpperCase() + x.slice(1).toLocaleLowerCase()
+        );
+        if (sequence.seq) {
+          await this.#executeCommandIn(
+            mailbox,
+            commands.store(sequence.seq, flags, 'remove', false),
+          );
+        }
+        if (sequence.uid) {
+          await this.#executeCommandIn(
+            mailbox,
+            commands.store(sequence.uid, flags, 'remove', true),
+          );
+        }
       }
     }
 
@@ -685,11 +691,13 @@ export class ImapClient {
 
   /**
    * Deletes multiple messages by marking them as deleted and expunging
-   * @param mailbox Name of the mailbox containing the messages
-   * @param args designed to take an output from findMany
+   * @param mailbox - Name of the mailbox containing the messages
+   * @param args - designed to take an output from findMany
    * @returns Promise that resolves when the deletion is complete
    * @example
    * ```ts
+   * declare const client: ImapClient;
+   *
    * // Delete specific messages by UID
    * await client.deleteMany('INBOX', {
    *   where: [{ uid: 123 }, { uid: 456 }, { uid: 789 }]
@@ -726,8 +734,8 @@ export class ImapClient {
   /**
    * Fetches messages
    * @deprecated
-   * @param sequence Message sequence set
-   * @param options Fetch options
+   * @param sequence - Message sequence set
+   * @param options - Fetch options
    * @returns Promise that resolves with the messages
    */
   async #fetch(
@@ -807,12 +815,6 @@ export class ImapClient {
     return messages;
   }
 
-  /**
-   * Executes an IMAP command
-   * @deprecated
-   * @param command Command to execute
-   * @returns Promise that resolves with the response lines
-   */
   async #executeCommand(command: string): Promise<string[]> {
     this.#assertConnected();
 
@@ -867,10 +869,6 @@ export class ImapClient {
     return await this.#executeCommand(command);
   }
 
-  /**
-   * Generates a unique command tag
-   * @returns Command tag
-   */
   #generateTag(): string {
     this.#tagCounter++;
     return `A${this.#tagCounter.toString().padStart(4, '0')}`;
@@ -879,11 +877,10 @@ export class ImapClient {
   /**
    * Attempts to reconnect to the IMAP server
    * @returns Promise that resolves when reconnected
-   * @throws {ImapConnectionError} If reconnection fails after max attempts
    */
-  async #reconnect(): Promise<void> {
+  async reconnect(force = false): Promise<void> {
     // If already reconnecting, wait for that to complete
-    if (this.#isReconnecting) return;
+    if (this.#isReconnecting && !force) return;
 
     this.#isReconnecting = true;
     this.#reconnectAttempts = 0;
